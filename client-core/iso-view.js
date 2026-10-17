@@ -1,48 +1,67 @@
-import { heightAt, SEA, MAXH } from '../shared/terrain.js';
-import { topColor, shade } from './palette.js';
+import { SEA } from '../shared/terrain.js';
+import { CHUNK } from '../shared/chunk.js';
+import { topColor, shade, wallColor, topGlyph, hash } from './palette.js';
 
-// Один блок: верхняя грань 4x2 клетки + две стены вниз до нулевого уровня
-function drawBlock(screen, sx, top, h, raw) {
+// Символы для боковых стенок: левая светлее, правая темнее (цветом), и символы другие
+const LEFT  = ['%', '&', '8'];
+const RIGHT = ['#', 'H', 'M'];
+
+// Рисуем один столбик: верхняя грань 4x2 символа и две стенки вниз до земли.
+// sx — левая колонка, top — верхняя строка, h — высота, raw — настоящая высота (для цвета),
+// x, y — координаты в чанке (нужны для хеша)
+function drawBlock(screen, sx, top, h, raw, x, y) {
   const c = topColor(raw);
-  const ch = raw <= SEA ? '~' : '.';
-  const fg = shade(c, 1.2);
 
-  for (let r = 0; r < 2; r++)
-    for (let k = 0; k < 4; k++)
-      screen.put(sx + k, top + r, ch, fg, c);
+  // Верхняя грань. Фон всегда 0 (чёрный): цвет есть только у символа
+  for (let r = 0; r < 2; r++) {
+    for (let k = 0; k < 4; k++) {
+      const g = hash(x * 4 + k, y * 2 + r, 1);
+      // Яркость слегка меняется от символа к символу — поверхность «живая»
+      const bright = 0.85 + ((g >>> 8) % 4) * 0.1;
+      screen.put(sx + k, top + r, topGlyph(raw, g), shade(c, bright), 0);
+    }
+  }
 
-  const left = shade(c, 0.7);
-  const right = shade(c, 0.5);
+  // Стенки: h строк вниз. i = 0 — самая верхняя строка стенки
   for (let i = 0; i < h; i++) {
     const row = top + 2 + i;
-    screen.put(sx,     row, ' ', 0, left);
-    screen.put(sx + 1, row, ' ', 0, left);
-    screen.put(sx + 2, row, ' ', 0, right);
-    screen.put(sx + 3, row, ' ', 0, right);
+    const wc = wallColor(raw, i);
+    for (let k = 0; k < 4; k++) {
+      const g = hash(x * 4 + k, y * 64 + i, 2);
+      if (k < 2) screen.put(sx + k, row, LEFT[g % LEFT.length],   shade(wc, 0.85), 0);
+      else       screen.put(sx + k, row, RIGHT[g % RIGHT.length], shade(wc, 0.55), 0);
+    }
   }
 }
 
-export function drawIso(screen, player) {
-  const cx = screen.w >> 1;
-  const cy = screen.h >> 1;
-  const hp = Math.max(heightAt(player.x, player.y), SEA); // высота под игроком
-  const vMax = (screen.w >> 2) + 2;
+// Нарисовать чанк-куб по центру экрана
+export function drawIso(screen, chunk, player) {
+  // Самая высокая клетка чанка: от неё зависит высота всего куба на экране
+  let maxH = SEA;
+  for (const v of chunk) if (v > maxH) maxH = v;
 
-  // s = dx + dy  (экранная строка), v = dx - dy  (экранная колонка / 2)
-  // Идём по s по возрастанию: от дальних тайлов к ближним
-  for (let s = -cy - MAXH - 2; s <= cy + MAXH + 2; s++) {
-    let v = -vMax;
-    if ((v + s) & 1) v++;               // dx и dy должны получиться целыми
-    for (; v <= vMax; v += 2) {
-      const dx = (s + v) >> 1;
-      const dy = (s - v) >> 1;
-      const raw = heightAt(player.x + dx, player.y + dy);
-      const h = raw > SEA ? raw : SEA;  // вода рисуется на уровне моря
-      const top = cy + s - (h - hp);    // первая строка верхней грани
-      if (top >= screen.h || top + h + 1 < 0) continue; // за экраном
+  // Весь куб занимает по высоте: maxH (холмы) + 2 * CHUNK (ромб основания)
+  const total = maxH + CHUNK * 2;
+  const baseRow = ((screen.h - total) >> 1) + maxH;  // строка, где «земля» дальнего угла
+  const cx = screen.w >> 1;                          // центр по горизонтали
 
-      drawBlock(screen, cx + v * 2 - 2, top, h, raw);
-      if (dx === 0 && dy === 0) screen.put(cx, top, '@', 0xffffff, topColor(raw));
+  // s = x + y — номер диагонали. Идём от дальней (0) к ближней (2*CHUNK-2),
+  // ближние рисуются позже и закрывают дальние (алгоритм художника)
+  for (let s = 0; s <= CHUNK * 2 - 2; s++) {
+    // На диагонали s допустимые x лежат между этими границами (y = s - x)
+    const from = Math.max(0, s - (CHUNK - 1));
+    const to = Math.min(CHUNK - 1, s);
+    for (let x = from; x <= to; x++) {
+      const y = s - x;
+      const raw = chunk[y * CHUNK + x];
+      const h = raw > SEA ? raw : SEA;        // вода рисуется на уровне моря
+      const top = baseRow + s - h;            // верхняя строка блока
+      const sx = cx + (x - y) * 2 - 2;        // левая колонка блока
+
+      drawBlock(screen, sx, top, h, raw, x, y);
+      if (x === player.x && y === player.y) {
+        screen.put(sx + 1, top, '@', 0xffe14d, 0);  // игрок
+      }
     }
   }
 }
