@@ -2,65 +2,61 @@ import { SEA } from '../shared/terrain.js';
 import { CHUNK } from '../shared/chunk.js';
 import { topColor, shade, wallColor, topGlyph, hash } from './palette.js';
 
-// Символы для боковых стенок: левая светлее, правая темнее (цветом), и символы другие
+// Символы для стенок. Левая и правая грани отличаются и символами, и яркостью
 const LEFT  = ['%', '&', '8'];
 const RIGHT = ['#', 'H', 'M'];
 
-// Рисуем один столбик: верхняя грань 4x2 символа и две стенки вниз до земли.
-// sx — левая колонка, top — верхняя строка, h — высота, raw — настоящая высота (для цвета),
-// x, y — координаты в чанке (нужны для хеша)
-function drawBlock(screen, sx, top, h, raw, x, y) {
-  const c = topColor(raw);
-
-  // Верхняя грань. Фон всегда 0 (чёрный): цвет есть только у символа
-  for (let r = 0; r < 2; r++) {
-    for (let k = 0; k < 4; k++) {
-      const g = hash(x * 4 + k, y * 2 + r, 1);
-      // Яркость слегка меняется от символа к символу — поверхность «живая»
-      const bright = 0.85 + ((g >>> 8) % 4) * 0.1;
-      screen.put(sx + k, top + r, topGlyph(raw, g), shade(c, bright), 0);
-    }
-  }
-
-  // Стенки: h строк вниз. i = 0 — самая верхняя строка стенки
-  for (let i = 0; i < h; i++) {
-    const row = top + 2 + i;
-    const wc = wallColor(raw, i);
-    for (let k = 0; k < 4; k++) {
-      const g = hash(x * 4 + k, y * 64 + i, 2);
-      if (k < 2) screen.put(sx + k, row, LEFT[g % LEFT.length],   shade(wc, 0.85), 0);
-      else       screen.put(sx + k, row, RIGHT[g % RIGHT.length], shade(wc, 0.55), 0);
-    }
-  }
+// Высота клетки для расчёта стенок: вода считается на уровне моря,
+// за краем чанка — 0 (там пустота)
+function hAt(chunk, x, y) {
+  if (x < 0 || y < 0 || x >= CHUNK || y >= CHUNK) return 0;
+  const v = chunk[y * CHUNK + x];
+  return v > SEA ? v : SEA;
 }
 
 // Нарисовать чанк-куб по центру экрана
 export function drawIso(screen, chunk, player) {
-  // Самая высокая клетка чанка: от неё зависит высота всего куба на экране
+  // Самая высокая клетка: от неё зависит высота всего рисунка
   let maxH = SEA;
   for (const v of chunk) if (v > maxH) maxH = v;
 
-  // Весь куб занимает по высоте: maxH (холмы) + 2 * CHUNK (ромб основания)
-  const total = maxH + CHUNK * 2;
-  const baseRow = ((screen.h - total) >> 1) + maxH;  // строка, где «земля» дальнего угла
+  // Рисунок занимает по высоте: maxH (холмы) + CHUNK (основание-ромб: (2*CHUNK-2)/2 строк)
+  const total = maxH + CHUNK;
+  const baseRow = ((screen.h - total) >> 1) + maxH;  // строка «земли» у дальнего угла
   const cx = screen.w >> 1;                          // центр по горизонтали
 
-  // s = x + y — номер диагонали. Идём от дальней (0) к ближней (2*CHUNK-2),
-  // ближние рисуются позже и закрывают дальние (алгоритм художника)
+  // s = x + y — номер диагонали. От дальней (0) к ближней: ближние рисуются позже
+  // и закрывают дальние (алгоритм художника)
   for (let s = 0; s <= CHUNK * 2 - 2; s++) {
-    // На диагонали s допустимые x лежат между этими границами (y = s - x)
     const from = Math.max(0, s - (CHUNK - 1));
     const to = Math.min(CHUNK - 1, s);
     for (let x = from; x <= to; x++) {
       const y = s - x;
       const raw = chunk[y * CHUNK + x];
-      const h = raw > SEA ? raw : SEA;        // вода рисуется на уровне моря
-      const top = baseRow + s - h;            // верхняя строка блока
-      const sx = cx + (x - y) * 2 - 2;        // левая колонка блока
+      const h = raw > SEA ? raw : SEA;      // вода рисуется на уровне моря
 
-      drawBlock(screen, sx, top, h, raw, x, y);
+      const col = cx + x - y;               // колонка: ровно 1 символ на шаг
+      const top = baseRow + (s >> 1) - h;   // строка верхушки (s >> 1 — это s / 2 без остатка)
+
+      // Верхушка столбика — ОДИН символ
+      const g = hash(x, y, 1);
+      const bright = 0.85 + ((g >>> 8) % 4) * 0.1;   // лёгкая «живость» яркости
+      screen.put(col, top, topGlyph(raw, g), shade(topColor(raw), bright), 0);
+
+      // Какая стенка видна: правая, если справа-спереди (x+1) клетка ниже, иначе левая
+      const hRight = hAt(chunk, x + 1, y);
+
+      // Под верхушкой — h символов стенки, по одному на каждый уровень высоты
+      for (let i = 0; i < h; i++) {
+        const z = h - 1 - i;                 // на какой высоте этот уровень стенки
+        const wc = wallColor(raw, i);
+        const gw = hash(x, y, i + 2);
+        if (z >= hRight) screen.put(col, top + 1 + i, RIGHT[gw % RIGHT.length], shade(wc, 0.55), 0);
+        else             screen.put(col, top + 1 + i, LEFT[gw % LEFT.length],   shade(wc, 0.85), 0);
+      }
+
       if (x === player.x && y === player.y) {
-        screen.put(sx + 1, top, '@', 0xffe14d, 0);  // игрок
+        screen.put(col, top - 1, '@', 0xffe14d, 0);   // игрок стоит НАД клеткой, на 1 символ выше
       }
     }
   }
