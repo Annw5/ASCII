@@ -17,6 +17,18 @@ export class Screen {
     this.ch[i] = char.codePointAt(0);
     this.fg[i] = fg;
     this.bg[i] = bg;
+    
+      // Залить весь экран «пустотой»
+  clear(bg = 0x05060a) {
+    this.ch.fill(32);
+    this.fg.fill(0);
+    this.bg.fill(bg);
+  }
+
+  // Вывести строку
+  text(x, y, str, fg = 0xffffff, bg = 0x000000) {
+    for (const c of str) this.put(x++, y, c, fg, bg);
+  }
   }
 
 //Строка ANSI-команд, которая превращает прошлый кадр в текущий
