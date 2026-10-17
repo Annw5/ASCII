@@ -1,4 +1,4 @@
-import { SEA } from '../shared/terrain.js';              // уровень моря
+import { SEA, MAXH } from '../shared/terrain.js';        // уровень моря и максимальная высота
 import { CHUNK } from '../shared/chunk.js';              // размер чанка
 import { topColor, shade, wallColor, topGlyph, hash } from './palette.js';   // цвета, символы и «случайность»
 
@@ -12,8 +12,8 @@ function hAt(chunk, x, y) {                              // высота кле�
 }                                                        // конец функции hAt
 
 export function drawIso(screen, chunk, player) {         // нарисовать чанк-куб по центру экрана
-  let maxH = SEA;                                        // самая высокая клетка; начинаем с моря
-  for (const v of chunk) if (v > maxH) maxH = v;         // ищем максимум среди всех клеток
+   let maxH = SEA;
+  for (const v of chunk) if (v > maxH) maxH = v;
 
   const total = maxH + CHUNK;                            // сколько строк занимает рисунок по высоте
   const baseRow = ((screen.h - total) >> 1) + maxH;      // строка «земли» у дальнего угла; >> 1 — деление на 2 без остатка
