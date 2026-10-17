@@ -3,13 +3,13 @@ export class Screen {
     this.w = w;
     this.h = h;
     const n = w*h;  // Типизированные массивы: 1 клетка = 2 + 4 + 4 байтa
-  this.ch = new Unit16Array(n).fill(32); //код символа
-  this.fg = new Unit32Array(n);  //цвет символа 0хRRGGBB
-  this.bg = new Unit32Array(n);  //цвет фона
+  this.ch = new Uint16Array(n).fill(32); //код символа
+  this.fg = new Uint32Array(n);  //цвет символа 0хRRGGBB
+  this.bg = new Uint32Array(n);  //цвет фона
   // Предыдущий кадр, чтобы выводить только разницу
-  this.pch = new Unit16Array(n);  //0="обязательно перерисовать"
-  this.pfg = new Unit32Array(n);
-  this.pbg = new Unit32Array(n);
+  this.pch = new Uint16Array(n);  //0="обязательно перерисовать"
+  this.pfg = new Uint32Array(n);
+  this.pbg = new Uint32Array(n);
   }
   put(x, y, char, fg=0xffffff, bg=0x000000) {
     if (x < 0 || y < 0 || x>= this.w || y >= this.h) return;
@@ -17,7 +17,7 @@ export class Screen {
     this.ch[i] = char.codePointAt(0);
     this.fg[i] = fg;
     this.bg[i] = bg;
-    
+  }
       // Залить весь экран «пустотой»
   clear(bg = 0x05060a) {
     this.ch.fill(32);
@@ -37,7 +37,7 @@ diff() {
   let out = '';
   let last = -2, lastFg = -1, lastBg = -1;
 
-  for (let i = 0; i < this.length; i++) {
+  for (let i = 0; i < this.ch.length; i++) {
       if (this.ch[i] === this.pch[i] &&
           this.fg[i] === this.pfg[i] &&
           this.bg[i] === this.pbg[i]) continue;
@@ -66,61 +66,3 @@ diff() {
     return out;
   }
 }
-
-client-term/main.js: вход, ввод и рисование:
-
-js
-import { Screen } from '../client-core/screen.js';
-
-const out = process.stdout;
-const player = { x: 0, y: 0 };
-
-// Пока карта считается из координат на лету (в уроке 2 заменим на нормальный генератор)
-function tileAt(x, y) {
-  const h = (Math.imul(x, 374761393) + Math.imul(y, 668265263)) >>> 0;
-  const r = h % 100;
-  if (r < 8)  return ['♣', 0x2e9b45, 0x0e2a12];
-  if (r < 11) return ['▲', 0x9a9a9a, 0x1a1a1a];
-  return ['.', 0x3a7a3a, 0x0e2a12];
-}
-
-let screen = new Screen(out.columns, out.rows);
-
-function render() {
-  const cx = screen.w >> 1, cy = screen.h >> 1;
-  for (let sy = 0; sy < screen.h; sy++) {
-    for (let sx = 0; sx < screen.w; sx++) {
-      const [c, fg, bg] = tileAt(player.x + sx - cx, player.y + sy - cy);
-      screen.put(sx, sy, c, fg, bg);
-    }
-  }
-  screen.put(cx, cy, '@', 0xffe14d, 0x0e2a12);
-  out.write(screen.diff());
-}
-
-// Подготовка терминала: альтернативный экран и скрытый курсор
-out.write('\x1b[?1049h\x1b[?25l');
-
-function quit() {
-  out.write('\x1b[0m\x1b[?25h\x1b[?1049l'); // вернуть всё как было
-  process.exit();
-}
-
-process.stdin.setRawMode(true);   // получаем каждую клавишу сразу, без Enter
-process.stdin.resume();
-process.stdin.on('data', (key) => {
-  const k = key.toString();
-  if (k === 'q' || k === '\x03') quit();               // q или Ctrl+C
-  if (k === 'w' || k === '\x1b[A') player.y--;
-  if (k === 's' || k === '\x1b[B') player.y++;
-  if (k === 'a' || k === '\x1b[D') player.x--;
-  if (k === 'd' || k === '\x1b[C') player.x++;
-  render();                                            // рисуем только по событию
-});
-
-out.on('resize', () => {
-  screen = new Screen(out.columns, out.rows);
-  render();
-});
-
-render();
