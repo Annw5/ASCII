@@ -3,7 +3,7 @@ import { CHUNK, makeChunk } from '../shared/chunk.js';
 import { drawIso } from './iso-view.js';
 
 // Наш единственный чанк. Числа — место в большом мире. Поменяйте их — получите другой ландшафт
-export const chunk = makeChunk(20, 12);
+export const chunk = makeChunk(48, 36);
 
 // Игрок: координаты внутри чанка (от 0 до CHUNK - 1)
 export const player = { x: 0, y: 0 };
