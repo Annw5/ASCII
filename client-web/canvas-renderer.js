@@ -1,76 +1,63 @@
-export class CanvasRenderer {
-  // canvas — элемент <canvas> со страницы
-  // cw, ch — размер одной клетки в пикселях (высота вдвое больше ширины, как в терминале)
-  constructor(canvas, cw = 10, ch = 20) {
-    this.canvas = canvas;
-    this.cw = cw;
-    this.ch = ch;
-    // ctx — «кисть»: через неё рисуют на холсте
-    this.ctx = canvas.getContext('2d');
-    this.cols = 0;
-    this.rows = 0;
-  }
+export class CanvasRenderer {                            // класс: рисует Screen на холсте
+  constructor(canvas) {                                  // запускается при создании
+    this.canvas = canvas;                                // запоминаем холст
+    this.ctx = canvas.getContext('2d');                  // ctx — «кисть» для рисования
+    this.cw = 10;                                        // ширина клетки в пикселях (потом пересчитаем)
+    this.ch = 20;                                        // высота клетки в пикселях
+  }                                                      // конец constructor
 
-  // Подогнать холст под размер окна. Возвращает, сколько клеток поместилось
-  resize() {
-    // Сколько целых клеток влезает в окно браузера
-    this.cols = Math.floor(window.innerWidth / this.cw);
-    this.rows = Math.floor(window.innerHeight / this.ch);
+  fit(cols, rows) {                                      // подобрать размер символа, чтобы cols x rows влезло в окно
+    const byHeight = window.innerHeight / rows;          // какая высота клетки подходит по высоте окна
+    const byWidth = (window.innerWidth / cols) * 2;      // какая подходит по ширине (клетка вдвое выше, чем шире)
+    let ch = Math.floor(Math.min(byHeight, byWidth));    // берём меньшую, чтобы влезло и там и там
+    ch = Math.max(8, ch - (ch % 2));                     // не меньше 8 и чётное, чтобы половина была целой
+    this.ch = ch;                                        // запоминаем высоту клетки
+    this.cw = ch / 2;                                    // ширина клетки — ровно половина высоты
 
-    // На «ретина»-экранах один CSS-пиксель = несколько физических.
-    // Учитываем это, иначе буквы будут размытыми
-    const dpr = window.devicePixelRatio || 1;
-    this.canvas.width = this.cols * this.cw * dpr;    // реальный размер холста
-    this.canvas.height = this.rows * this.ch * dpr;
-    this.canvas.style.width = this.cols * this.cw + 'px';   // размер на странице
-    this.canvas.style.height = this.rows * this.ch + 'px';
+    const w = cols * this.cw;                            // ширина всей картинки в пикселях
+    const h = rows * this.ch;                            // высота всей картинки в пикселях
+    const dpr = window.devicePixelRatio || 1;            // плотность пикселей экрана (на «ретине» больше 1)
+    this.canvas.width = w * dpr;                         // реальный размер холста
+    this.canvas.height = h * dpr;                        // реальная высота холста
+    this.canvas.style.width = w + 'px';                  // размер на странице
+    this.canvas.style.height = h + 'px';                 // высота на странице
+    this.canvas.style.marginLeft = Math.floor((window.innerWidth - w) / 2) + 'px';   // отступ слева — центрируем по ширине
+    this.canvas.style.marginTop = Math.floor((window.innerHeight - h) / 2) + 'px';   // отступ сверху — центрируем по высоте
 
-    // Любое изменение размера холста сбрасывает настройки кисти, задаём их заново
-    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);       // масштаб под dpr
-    this.ctx.font = `${Math.floor(this.ch * 0.8)}px monospace`;
-    this.ctx.textAlign = 'center';                      // текст по центру клетки
-    this.ctx.textBaseline = 'middle';
-    return { cols: this.cols, rows: this.rows };
-  }
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);         // масштаб кисти под dpr (после смены размера он сбрасывается)
+    this.ctx.font = `${Math.floor(this.ch * 0.8)}px monospace`;   // шрифт: 80% от высоты клетки
+    this.ctx.textAlign = 'center';                       // текст по центру клетки по горизонтали
+    this.ctx.textBaseline = 'middle';                    // и по вертикали
+  }                                                      // конец fit
 
-  // Нарисовать экран-буфер. Как и в diff(), трогаем только изменившиеся клетки
-  draw(screen) {
-    const ctx = this.ctx;
-    const { cw, ch } = this;
-    let lastBg = -1, lastFg = -1;   // чтобы не менять цвет кисти без нужды
+  draw(screen) {                                         // нарисовать экран-буфер на холсте
+    const ctx = this.ctx;                                // короткое имя для кисти
+    const { cw, ch } = this;                             // достаём размеры клетки
+    let lastBg = -1;                                     // последний цвет, выставленный кисти (-1 — никакого)
 
-    for (let i = 0; i < screen.ch.length; i++) {
-      if (screen.ch[i] === screen.pch[i] &&
-          screen.fg[i] === screen.pfg[i] &&
-          screen.bg[i] === screen.pbg[i]) continue;
+    for (let i = 0; i < screen.ch.length; i++) {         // перебираем все клетки экрана
+      if (screen.ch[i] === screen.pch[i] &&              // символ такой же, как в прошлом кадре
+          screen.fg[i] === screen.pfg[i] &&              // и цвет символа такой же
+          screen.bg[i] === screen.pbg[i]) continue;      // и фон такой же — пропускаем клетку
 
-      // Запоминаем клетку как «прошлый кадр»
-      screen.pch[i] = screen.ch[i];
-      screen.pfg[i] = screen.fg[i];
-      screen.pbg[i] = screen.bg[i];
+      screen.pch[i] = screen.ch[i];                      // запоминаем символ как «прошлый кадр»
+      screen.pfg[i] = screen.fg[i];                      // запоминаем цвет символа
+      screen.pbg[i] = screen.bg[i];                      // запоминаем цвет фона
 
-      // Из номера клетки получаем её столбец и строку, затем пиксели
-      const x = (i % screen.w) * cw;
-      const y = Math.floor(i / screen.w) * ch;
+      const x = (i % screen.w) * cw;                     // пиксель слева: номер столбца * ширина клетки
+      const y = Math.floor(i / screen.w) * ch;           // пиксель сверху: номер строки * высота клетки
 
-      // Фон: залить прямоугольник
-      if (screen.bg[i] !== lastBg) {
-        lastBg = screen.bg[i];
-        // toString(16) — число в 16-ричную запись, padStart добивает нулями до 6 цифр
-        ctx.fillStyle = '#' + lastBg.toString(16).padStart(6, '0');
-      }
-      ctx.fillRect(x, y, cw, ch);
+      if (screen.bg[i] !== lastBg) {                     // цвет фона отличается от того, что у кисти?
+        lastBg = screen.bg[i];                           // запоминаем новый
+        ctx.fillStyle = '#' + lastBg.toString(16).padStart(6, '0');   // число в запись «#rrggbb»
+      }                                                  // конец if
+      ctx.fillRect(x, y, cw, ch);                        // закрашиваем фон клетки (он у нас чёрный)
 
-      // Символ (пробелы рисовать не нужно)
-      if (screen.ch[i] !== 32) {
-        if (screen.fg[i] !== lastFg) {
-          lastFg = screen.fg[i];
-        }
-        // fillStyle общий для фона и текста, поэтому ставим его заново и сбрасываем кэш фона
-        ctx.fillStyle = '#' + lastFg.toString(16).padStart(6, '0');
-        lastBg = -1;
-        ctx.fillText(String.fromCodePoint(screen.ch[i]), x + cw / 2, y + ch / 2);
-      }
-    }
-  }
-}
+      if (screen.ch[i] !== 32) {                         // это не пробел?
+        ctx.fillStyle = '#' + screen.fg[i].toString(16).padStart(6, '0');   // цвет символа
+        lastBg = -1;                                     // кисть теперь «не того цвета» для фона — сбрасываем
+        ctx.fillText(String.fromCodePoint(screen.ch[i]), x + cw / 2, y + ch / 2);   // рисуем символ по центру клетки
+      }                                                  // конец if
+    }                                                    // конец цикла
+  }                                                      // конец draw
+}                                                        // конец класса
