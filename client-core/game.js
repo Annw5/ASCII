@@ -1,28 +1,47 @@
-import { heightAt, SEA } from '../shared/terrain.js';
+import { SEA } from '../shared/terrain.js';
+import { CHUNK, makeChunk } from '../shared/chunk.js';
 import { drawIso } from './iso-view.js';
 
-// Игрок: объект с двумя полями. export — чтобы другие файлы могли его взять
+// Наш единственный чанк. Числа — место в большом мире. Поменяйте их — получите другой ландшафт
+export const chunk = makeChunk(20, 12);
+
+// Игрок: координаты внутри чанка (от 0 до CHUNK - 1)
 export const player = { x: 0, y: 0 };
 
-// Ставим игрока на сушу: пока под ним вода — сдвигаем вправо
-export function spawn() {
-  while (heightAt(player.x, player.y) <= SEA) player.x++;
+// Высота клетки чанка
+function at(x, y) {
+  return chunk[y * CHUNK + x];
 }
 
-// Попытка шагнуть на (dx, dy): подняться можно максимум на 1 уровень, в воду нельзя
-export function tryMove(dx, dy) {
-  const here = heightAt(player.x, player.y);
-  const next = heightAt(player.x + dx, player.y + dy);
-  if (next > SEA && Math.abs(next - here) <= 1) {
-    player.x += dx;
-    player.y += dy;
+// Ставим игрока на сушу ближе всего к центру чанка
+export function spawn() {
+  const mid = CHUNK / 2;
+  let best = Infinity;                       // Infinity — «бесконечность», любое число меньше
+  for (let y = 0; y < CHUNK; y++) {
+    for (let x = 0; x < CHUNK; x++) {
+      if (at(x, y) <= SEA) continue;         // вода — пропускаем
+      const d = Math.abs(x - mid) + Math.abs(y - mid);   // расстояние до центра
+      if (d < best) { best = d; player.x = x; player.y = y; }
+    }
   }
 }
 
-// Нарисовать кадр в переданный экран-буфер (куда он потом попадёт — терминал или canvas — игре всё равно)
+// Шаг: нельзя выйти за край чанка, подняться больше чем на 1 уровень или зайти в воду
+export function tryMove(dx, dy) {
+  const nx = player.x + dx;
+  const ny = player.y + dy;
+  if (nx < 0 || ny < 0 || nx >= CHUNK || ny >= CHUNK) return;
+  const next = at(nx, ny);
+  if (next > SEA && Math.abs(next - at(player.x, player.y)) <= 1) {
+    player.x = nx;
+    player.y = ny;
+  }
+}
+
+// Нарисовать кадр в экран-буфер
 export function renderGame(screen) {
-  screen.clear();
-  drawIso(screen, player);
-  const h = heightAt(player.x, player.y);
-  screen.text(1, 0, ` x:${player.x} y:${player.y} h:${h} `);
+  screen.clear(0x000000);                    // чёрный фон
+  drawIso(screen, chunk, player);
+  const h = at(player.x, player.y);
+  screen.text(1, 0, ` x:${player.x} y:${player.y} h:${h} `, 0x888888);
 }
