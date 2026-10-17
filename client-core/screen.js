@@ -18,6 +18,7 @@ export class Screen {
     this.fg[i] = fg;
     this.bg[i] = bg;
   }
+}
       // Залить весь экран «пустотой»
   clear(bg = 0x05060a) {
     this.ch.fill(32);
