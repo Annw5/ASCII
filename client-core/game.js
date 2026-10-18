@@ -9,10 +9,16 @@ function at(x, y) {                                      // высота кле�
   return world.cur.heights[y * CHUNK + x];               // номер в списке = строка * ширина + столбец
 }                                                        // конец at
 
+function blocked(x, y) {                                 // занята ли клетка деревом, камнем или существом
+  const c = world.cur;                                   // текущий чанк
+  if (c.objs[y * CHUNK + x] !== 0) return true;          // стоит предмет — занята
+  return c.mobs.some((m) => m.x === x && m.y === y);     // some — «есть ли хоть один»; стоит существо — занята
+}                                                        // конец blocked
+
 export function viewSize() {                             // сколько колонок и строк нужно, чтобы чанк влез
   return {                                               // возвращаем объект с двумя числами
     cols: CHUNK * 2 + 4,                                 // ширина рисунка + запас по краям
-    rows: MAXH + CHUNK + 4,                              // самая высокая возможная гора + основание + запас
+    rows: ((MAXH + 1) >> 1) + CHUNK + 6,                 // высота: холмы (1 уровень = полстроки) + основание + запас сверху для @ и надписи
   };                                                     // конец объекта
 }                                                        // конец viewSize
 
@@ -22,7 +28,7 @@ export function spawn() {                                // начало игр�
   let best = Infinity;                                   // лучшее расстояние до центра
   for (let y = 0; y < CHUNK; y++) {                      // перебираем строки
     for (let x = 0; x < CHUNK; x++) {                    // перебираем столбцы
-      if (at(x, y) <= SEA) continue;                     // вода — пропускаем
+      if (at(x, y) <= SEA || blocked(x, y)) continue;    // вода или занятая клетка — пропускаем
       const d = Math.abs(x - mid) + Math.abs(y - mid);   // расстояние до центра
       if (d < best) { best = d; player.x = x; player.y = y; }   // ближе — запоминаем
     }                                                    // конец цикла по x
@@ -40,11 +46,8 @@ export function tryMove(dx, dy) {                        // попытка ша�
 
   if (dirX !== -1 && dirY !== -1) return;                // угол чанка: пока не пускаем (позже добавим диагональный чанк)
 
-  if (dirX !== -1 || dirY !== -1) {                      // пересекаем границу чанка?
-    go(dirX !== -1 ? dirX : dirY);                       // переходим в соседний чанк (край у всех чанков одной высоты, шаг всегда возможен)
-    player.x = nx;                                       // ставим игрока на новое место
-    player.y = ny;                                       // (координата вдоль границы сохраняется)
-    return;                                              // шаг сделан
+  if (next > SEA && Math.abs(next - at(player.x, player.y)) <= 1 && !blocked(nx, ny)) {   // не вода, перепад ≤ 1 и клетка свободна
+     
   }                                                      // конец if
 
   const next = at(nx, ny);                               // высота клетки, куда шагаем
