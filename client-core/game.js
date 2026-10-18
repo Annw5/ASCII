@@ -44,6 +44,22 @@ export function tryMove(dx, dy) {                        // попытка ша�
   if (ny < 0)           { dirY = N; ny = CHUNK - 1; }    // вышли вверх: на нижний край соседа
   else if (ny >= CHUNK) { dirY = S; ny = 0; }            // вышли вниз: на верхний край соседа
 
+  if (dirX !== -1 && dirY !== -1) return;                // угол чанка: пока не пускаем
+
+  if (dirX !== -1 || dirY !== -1) {                      // пересекаем границу чанка?
+    go(dirX !== -1 ? dirX : dirY);                       // переходим в соседний чанк
+    player.x = nx;                                       // ставим игрока на новое место
+    player.y = ny;                                       // координата вдоль границы сохраняется
+    return;                                              // шаг сделан, выходим
+  }                                                      // конец if
+
+  const next = at(nx, ny);                               // высота клетки, куда шагаем (объявляем ДО использования)
+  if (next > SEA && Math.abs(next - at(player.x, player.y)) <= 1 && !blocked(nx, ny)) {   // не вода, перепад ≤ 1, клетка свободна
+    player.x = nx;                                       // шагаем
+    player.y = ny;                                       // шагаем
+  }                                                      // конец if
+}                                                        // конец tryMove
+
   if (dirX !== -1 && dirY !== -1) return;                // угол чанка: пока не пускаем (позже добавим диагональный чанк)
 
   if (next > SEA && Math.abs(next - at(player.x, player.y)) <= 1 && !blocked(nx, ny)) {   // не вода, перепад ≤ 1 и клетка свободна
@@ -59,7 +75,7 @@ export function tryMove(dx, dy) {                        // попытка ша�
 
 export function renderGame(screen) {                     // нарисовать кадр
   screen.clear(0x000000);                                // чёрный фон
-  drawIso(screen, world.cur.heights, player);            // рисуем текущий чанк и игрока
+    drawIso(screen, world.cur.heights, player, world.cur.objs, world.cur.mobs);   // передаём ещё предметы (objs) и существ (mobs)
   const h = at(player.x, player.y);                      // высота под игроком
   screen.text(1, 0, ` chunk:${world.cur.id} x:${player.x} y:${player.y} h:${h} `, 0x888888);   // подпись
 }                                                        // конец renderGame
