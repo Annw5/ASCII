@@ -60,19 +60,6 @@ export function tryMove(dx, dy) {                        // попытка ша�
   }                                                      // конец if
 }                                                        // конец tryMove
 
-  if (dirX !== -1 && dirY !== -1) return;                // угол чанка: пока не пускаем (позже добавим диагональный чанк)
-
-  if (next > SEA && Math.abs(next - at(player.x, player.y)) <= 1 && !blocked(nx, ny)) {   // не вода, перепад ≤ 1 и клетка свободна
-     
-  }                                                      // конец if
-
-  const next = at(nx, ny);                               // высота клетки, куда шагаем
-  if (next > SEA && Math.abs(next - at(player.x, player.y)) <= 1) {   // не вода, перепад не больше 1
-    player.x = nx;                                       // шагаем
-    player.y = ny;                                       // шагаем
-  }                                                      // конец if
-}                                                        // конец tryMove
-
 export function renderGame(screen) {                     // нарисовать кадр
   screen.clear(0x000000);                                // чёрный фон
     drawIso(screen, world.cur.heights, player, world.cur.objs, world.cur.mobs);   // передаём ещё предметы (objs) и существ (mobs)
