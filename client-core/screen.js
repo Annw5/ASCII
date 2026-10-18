@@ -10,6 +10,8 @@ export class Screen {
   this.pch = new Uint16Array(n);  //0="обязательно перерисовать"
   this.pfg = new Uint32Array(n);
   this.pbg = new Uint32Array(n);
+  this.hints = [];                                     // подсказки этого кадра (мелкие символы поверх сетки)
+  this.prevHints = [];                                 // подсказки прошлого кадра (нужны, чтобы стереть их следы)
   }
   put(x, y, char, fg=0xffffff, bg=0x000000) {
     if (x < 0 || y < 0 || x>= this.w || y >= this.h) return;
@@ -24,13 +26,19 @@ export class Screen {
     this.ch.fill(32);
     this.fg.fill(0);
     this.bg.fill(bg);
+    this.prevHints = this.hints;                         // то, что было нарисовано, становится «прошлым»
+    this.hints = [];                                     // новый кадр начинается без подсказок
   }
 
   // Вывести строку
   text(x, y, str, fg = 0xffffff, bg = 0x000000) {
     for (const c of str) this.put(x++, y, c, fg, bg);
   }
-  
+
+    hint(x, y, char, fg = 0xffffff) {                      // положить мелкий символ в клетку (x, y)
+    if (x < 0 || y < 0 || x >= this.w || y >= this.h) return;   // за экраном — ничего не делаем
+    this.hints.push({ i: y * this.w + x, c: char, fg });  // запоминаем номер клетки, символ и цвет
+  }                                                      // конец hint
 
 //Строка ANSI-команд, которая превращает прошлый кадр в текущий
 
