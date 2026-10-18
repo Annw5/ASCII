@@ -7,13 +7,7 @@ const renderer = new CanvasRenderer(canvas);             // создаём ри�
 
 let screen;                                              // экран-буфер; создадим в setup()
 
-const KEYS = {                                           // таблица: клавиша -> шаг [dx, dy]
-  w: [-1, -1], arrowup:    [-1, -1],                     // ровно вверх по экрану
-  s: [1, 1],   arrowdown:  [1, 1],                       // ровно вниз
-  a: [-1, 1],  arrowleft:  [-1, 1],                      // влево
-  d: [1, -1],  arrowright: [1, -1],                      // вправо
-  q: [-1, 0], e: [0, -1], z: [0, 1], c: [1, 0],          // четыре «полушага» по диагоналям
-};                                                       // конец таблицы
+import { MOVES, ALIAS } from '../client-core/controls.js';   // шаги и стрелки
 
 function setup() {                                       // подготовка под размер окна
   const { cols, rows } = viewSize();                     // сколько клеток нужно чанку
@@ -27,11 +21,13 @@ function render() {                                      // один кадр
 }                                                        // конец render
 
 window.addEventListener('keydown', (e) => {              // нажатие клавиши
-  const step = KEYS[e.key.toLowerCase()];                // ищем клавишу в таблице; не нашли — undefined
-  if (!step) return;                                     // чужая клавиша — выходим
+  let k = e.key.toLowerCase();                           // какая клавиша, маленькими буквами
+  k = ALIAS[k] || k;                                     // если это стрелка — заменяем на букву, иначе оставляем как есть
+  const m = MOVES.find((m) => m.key === k);              // ищем в списке шаг с такой клавишей
+  if (!m) return;                                        // не нашли — чужая клавиша, выходим
   e.preventDefault();                                    // стрелки не должны прокручивать страницу
-  tryMove(step[0], step[1]);                             // шаг: step[0] — dx, step[1] — dy
-  render();                                              // перерисовываем
+  tryMove(m.dx, m.dy);                                   // шагаем
+  render();                                              // перерисовываем кадр
 });                                                      // конец обработчика
 
 window.addEventListener('resize', () => {                // окно изменило размер
