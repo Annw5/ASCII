@@ -1,3 +1,4 @@
+import { MOVES } from './controls.js';                   // список возможных шагов
 import { SEA, MAXH } from '../shared/terrain.js';              // уровень моря
 import { CHUNK } from '../shared/chunk.js';              // размер чанка
 import { topColor, shade, wallColor, topGlyph, hash } from './palette.js';   // цвета, символы, «случайность»
@@ -54,6 +55,17 @@ export function drawIso(screen, chunk, player) {
       }
     }
   }
-
+  const here = chunk[player.y * CHUNK + player.x];       // высота клетки, на которой стоит игрок
+  for (const m of MOVES) {                               // перебираем все 8 возможных шагов
+    const nx = player.x + m.dx;                          // x клетки, куда попадём
+    const ny = player.y + m.dy;                          // y клетки, куда попадём
+    if (nx < 0 || ny < 0 || nx >= CHUNK || ny >= CHUNK) continue;   // клетка за краем чанка — подсказку не рисуем
+    const raw = chunk[ny * CHUNK + nx];                  // настоящая высота той клетки
+    const h = raw > SEA ? raw : SEA;                     // высота для рисования (воду считаем уровнем моря)
+    const ok = raw > SEA && Math.abs(raw - here) <= 1;   // можно ли туда шагнуть: не вода и перепад не больше 1
+    const col = cx + nx - ny;                            // колонка той клетки — формула та же, что при рисовании мира
+    const top = baseRow + ((nx + ny - h) >> 1);         // строка верхушки той клетки — тоже та же формула
+    screen.put(col, top - 1, m.key.toUpperCase(), ok ? 0x6dff6d : 0x803030, 0);   // буква над клеткой: зелёная или тёмно-красная
+  }                                                      // конец цикла по шагам
   if (pCol >= 0) screen.put(pCol, pRow, '@', 0xffe14d, 0);
 }
