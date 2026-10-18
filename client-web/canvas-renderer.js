@@ -61,7 +61,7 @@ export class CanvasRenderer {                            // класс: рису
         ctx.fillText(String.fromCodePoint(screen.ch[i]), x + cw / 2, y + ch / 2);   // рисуем символ по центру клетки
       }                                                  // конец if
     }                                                    // конец цикла
-        ctx.font = `${Math.floor(ch * 0.4)}px monospace`;    // шрифт подсказок: 40% высоты клетки, вдвое мельче основного
+        ctx.font = `${Math.floor(ch * 0.5)}px monospace`;    // шрифт подсказок: 40% высоты клетки, вдвое мельче основного
     for (const h of screen.hints) {                      // рисуем подсказки поверх сетки
       const x = (h.i % screen.w) * cw;                   // пиксель слева у клетки
       const y = Math.floor(h.i / screen.w) * ch;         // пиксель сверху у клетки
