@@ -1,7 +1,18 @@
-export function drawIso(screen, chunk, player) {
-  let maxH = SEA;
-  for (const v of chunk) if (v > maxH) maxH = v;
+import { SEA, MAXH } from '../shared/terrain.js';              // уровень моря
+import { CHUNK } from '../shared/chunk.js';              // размер чанка
+import { topColor, shade, wallColor, topGlyph, hash } from './palette.js';   // цвета, символы, «случайность»
 
+const LEFT  = ['%', '&', '8'];                           // символы левой стенки
+const RIGHT = ['#', 'H', 'M'];                           // символы правой стенки
+
+function hAt(chunk, x, y) {                              // высота клетки для расчёта стенок
+  if (x < 0 || y < 0 || x >= CHUNK || y >= CHUNK) return 0;   // за краем чанка высота 0
+  const v = chunk[y * CHUNK + x];                        // берём высоту из списка
+  return v > SEA ? v : SEA;                              // вода считается на уровне моря
+}                                                        // конец hAt
+export function drawIso(screen, chunk, player) {
+ 
+  const maxH = MAXH;                                     // одна высота для всех чанков, чтобы рисунок не прыгал
   const H2 = (maxH + 1) >> 1;                            // высота в строках: 1 уровень = полстроки
   const total = H2 + CHUNK;
   const baseRow = ((screen.h - total) >> 1) + H2;
