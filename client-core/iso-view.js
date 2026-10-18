@@ -65,7 +65,7 @@ export function drawIso(screen, chunk, player) {
     const ok = raw > SEA && Math.abs(raw - here) <= 1;   // можно ли туда шагнуть: не вода и перепад не больше 1
     const col = cx + nx - ny;                            // колонка той клетки — формула та же, что при рисовании мира
     const top = baseRow + ((nx + ny - h) >> 1);         // строка верхушки той клетки — тоже та же формула
-    screen.put(col, top - 1, m.key.toUpperCase(), ok ? 0x6dff6d : 0x803030, 0);   // буква над клеткой: зелёная или тёмно-красная
+    screen.hint(col, top, m.key.toUpperCase(), ok ? 0x6dff6d : 0x803030);   // мелкая буква на самой клетке, а не над ней
   }                                                      // конец цикла по шагам
   if (pCol >= 0) screen.put(pCol, pRow, '@', 0xffe14d, 0);
 }
