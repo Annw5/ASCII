@@ -49,7 +49,9 @@ export const MOB_KINDS = [                               // номер в спи
   null,                                                  // 0 — нет
   ...BEAST_LIST.map(([name, color]) => ({ glyph: name[0], color, name })),   // глиф = первая буква названия
   { glyph: '☺', color: 0x4de1ff, name: 'NPC' },          // последним идёт NPC
+  { glyph: '@', color: 0x7dff7d, name: 'игрок' },        // другие игроки
 ];
+export const PLAYER = NPC + 1;
 
 // Расставить деревья и камни. Возвращает список по 1 байту на клетку
 export function makeObjects(id, heights) {               // id — номер чанка, heights — его высоты
