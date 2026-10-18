@@ -35,6 +35,8 @@ export class CanvasRenderer {                            // класс: рису
     const { cw, ch } = this;                             // достаём размеры клетки
     let lastBg = -1;                                     // последний цвет, выставленный кисти (-1 — никакого)
 
+    for (const h of screen.prevHints) screen.pch[h.i] = 0;   // клетки со старыми подсказками перерисуем целиком, чтобы стереть буквы
+    for (const h of screen.hints) screen.pch[h.i] = 0;       // клетки с новыми тоже: иначе буква наложится сама на себя
     for (let i = 0; i < screen.ch.length; i++) {         // перебираем все клетки экрана
       if (screen.ch[i] === screen.pch[i] &&              // символ такой же, как в прошлом кадре
           screen.fg[i] === screen.pfg[i] &&              // и цвет символа такой же
@@ -59,5 +61,13 @@ export class CanvasRenderer {                            // класс: рису
         ctx.fillText(String.fromCodePoint(screen.ch[i]), x + cw / 2, y + ch / 2);   // рисуем символ по центру клетки
       }                                                  // конец if
     }                                                    // конец цикла
+        ctx.font = `${Math.floor(ch * 0.4)}px monospace`;    // шрифт подсказок: 40% высоты клетки, вдвое мельче основного
+    for (const h of screen.hints) {                      // рисуем подсказки поверх сетки
+      const x = (h.i % screen.w) * cw;                   // пиксель слева у клетки
+      const y = Math.floor(h.i / screen.w) * ch;         // пиксель сверху у клетки
+      ctx.fillStyle = '#' + h.fg.toString(16).padStart(6, '0');   // цвет буквы в записи «#rrggbb»
+      ctx.fillText(h.c, x + cw * 0.78, y + ch * 0.78);   // нижний правый угол клетки; 0.78 можно подвигать
+    }                                                    // конец цикла по подсказкам
+    ctx.font = `${Math.floor(ch * 0.8)}px monospace`;    // возвращаем обычный шрифт для следующего кадра
   }                                                      // конец draw
 }                                                        // конец класса
