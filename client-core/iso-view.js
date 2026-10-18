@@ -2,6 +2,7 @@ import { MOVES } from './controls.js';                   // список воз�
 import { SEA, MAXH } from '../shared/terrain.js';              // уровень моря
 import { CHUNK } from '../shared/chunk.js';              // размер чанка
 import { topColor, shade, wallColor, topGlyph, hash } from './palette.js';   // цвета, символы, «случайность»
+import { OBJ_KINDS, MOB_KINDS } from '../shared/objects.js';   // как рисовать предметы и существ
 
 const LEFT  = ['%', '&', '8'];                           // символы левой стенки
 const RIGHT = ['#', 'H', 'M'];                           // символы правой стенки
@@ -11,8 +12,10 @@ function hAt(chunk, x, y) {                              // высота кле�
   const v = chunk[y * CHUNK + x];                        // берём высоту из списка
   return v > SEA ? v : SEA;                              // вода считается на уровне моря
 }                                                        // конец hAt
-export function drawIso(screen, chunk, player) {
- 
+
+export function drawIso(screen, chunk, player, objs, mobs) {   // objs — предметы, mobs — существа
+  const occ = new Map();                                 // словарь: номер клетки -> вид существа
+  for (const m of mobs) occ.set(m.y * CHUNK + m.x, m.kind);   // кладём всех существ, чтобы быстро проверять клетку
   const maxH = MAXH;                                     // одна высота для всех чанков, чтобы рисунок не прыгал
   const H2 = (maxH + 1) >> 1;                            // высота в строках: 1 уровень = полстроки
   const total = H2 + CHUNK;
@@ -49,6 +52,11 @@ export function drawIso(screen, chunk, player) {
         else             screen.put(col, r, LEFT[gw % LEFT.length],  shade(wc, 0.85), 0);
       }
 
+      const ob = OBJ_KINDS[objs[y * CHUNK + x]];         // предмет на этой клетке (null, если пусто)
+      if (ob) screen.put(col, top - 1, ob.glyph, ob.color, 0);   // рисуем на 1 символ выше верхушки, как «@»
+      const mk = MOB_KINDS[occ.get(y * CHUNK + x) || 0]; // существо на этой клетке (null, если нет)
+      if (mk) screen.put(col, top - 1, mk.glyph, mk.color, 0);   // рисуем на том же месте
+
       if (x === player.x && y === player.y) {
         pCol = col;
         pRow = top - 1;                                  // ровно над символом своей клетки
@@ -62,7 +70,7 @@ export function drawIso(screen, chunk, player) {
     if (nx < 0 || ny < 0 || nx >= CHUNK || ny >= CHUNK) continue;   // клетка за краем чанка — подсказку не рисуем
     const raw = chunk[ny * CHUNK + nx];                  // настоящая высота той клетки
     const h = raw > SEA ? raw : SEA;                     // высота для рисования (воду считаем уровнем моря)
-    const ok = raw > SEA && Math.abs(raw - here) <= 1;   // можно ли туда шагнуть: не вода и перепад не больше 1
+    const ok = raw > SEA && Math.abs(raw - here) <= 1 && objs[ny * CHUNK + nx] === 0 && !occ.has(ny * CHUNK + nx);   // + клетка не занята
     const col = cx + nx - ny;                            // колонка той клетки — формула та же, что при рисовании мира
     const top = baseRow + ((nx + ny - h) >> 1);         // строка верхушки той клетки — тоже та же формула
     screen.hint(col, top, m.key.toUpperCase(), ok ? 0x6dff6d : 0x803030);   // мелкая буква на самой клетке, а не над ней
