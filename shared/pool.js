@@ -9,10 +9,14 @@ export const world = { cur: null };                      // world.cur — чан
 
 function load(id) {                                      // получить чанк по номеру (создать, если не загружен)
   if (loaded.has(id)) return loaded.get(id);             // уже есть — отдаём его
-  const c = {                                            // новый чанк — объект с тремя полями
+  const heights = makeChunk(id * 37, id * 61);           // высоты; место в мире зависит от номера
+  const objs = makeObjects(id, heights);                 // деревья и камни
+  const c = {                                            // новый чанк — объект с полями
     id,                                                  // номер в листе
-    heights: makeChunk(id * 37, id * 61),                // высоты; место в мире зависит от номера, поэтому у каждого номера свой вид
-    links: [-1, -1, -1, -1],                             // с кем соединён по сторонам N, E, S, W; -1 — пока ни с кем
+    heights,                                             // высоты
+    objs,                                                // неподвижные предметы
+    mobs: makeMobs(id, heights, objs),                   // звери и NPC
+    links: [-1, -1, -1, -1],                             // соседи по сторонам N, E, S, W; -1 — пока никого
   };                                                     // конец объекта
   loaded.set(id, c);                                     // запоминаем в словаре
   return c;                                              // отдаём
