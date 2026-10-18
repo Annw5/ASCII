@@ -1,6 +1,6 @@
 import { heightAt, SEA } from './terrain.js';           // высота мира и уровень моря
 
-export const CHUNK = 12;                                 // сторона чанка в клетках
+export const CHUNK = 32;                                 // сторона чанка в клетках
 const EDGE = SEA + 3;                                    // высота на самом краю чанка (всегда суша)
 const BORDER = 3;                                        // за сколько клеток от края начинаем выравнивать
 
