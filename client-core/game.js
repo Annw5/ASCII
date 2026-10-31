@@ -1,4 +1,3 @@
-import { world, start, restore, go, N, E, S, W } from '../shared/pool.js';
 import { SEA, MAXH } from '../shared/terrain.js';        // уровень моря и максимальная высота
 import { CHUNK } from '../shared/chunk.js';              // размер чанка
 import { world, start, go, N, E, S, W } from '../shared/pool.js';   // пул чанков и стороны света
