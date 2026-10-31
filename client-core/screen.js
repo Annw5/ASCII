@@ -43,6 +43,10 @@ export class Screen {
 //Строка ANSI-команд, которая превращает прошлый кадр в текущий
 
 diff() {
+  for (const h of this.hints) {                          // подсказки в терминале: буква занимает клетку верхней грани
+  this.ch[h.i] = h.c.codePointAt(0);
+  this.fg[h.i] = h.fg;
+  }
   let out = '';
   let last = -2, lastFg = -1, lastBg = -1;
 
