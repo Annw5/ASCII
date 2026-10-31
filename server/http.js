@@ -5,7 +5,6 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8' };
-const ALLOWED = /^(index\.html|(client-web|client-core|shared)\/)/;
 const ALLOWED = /^(index\.html|sw\.js|(client-web|client-core|shared)\/)/;
 
 export function makeHttp() {
