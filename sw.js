@@ -1,12 +1,12 @@
-const CACHE = 'ascii-v1';   // добавил/изменил список файлов — поменяй версию
+const CACHE = 'ascii-v2';
 const FILES = [
-  '/', '/index.html',
-  '/client-web/main.js', '/client-web/canvas-renderer.js',
-  '/client-core/screen.js', '/client-core/game.js', '/client-core/online.js',
-  '/client-core/controls.js', '/client-core/iso-view.js', '/client-core/palette.js',
-  '/client-core/menu.js', '/client-core/save.js',
-  '/shared/terrain.js', '/shared/chunk.js', '/shared/pool.js',
-  '/shared/objects.js', '/shared/hash.js',
+  './', 'index.html',
+  'client-web/main.js', 'client-web/canvas-renderer.js',
+  'client-core/screen.js', 'client-core/game.js', 'client-core/online.js',
+  'client-core/controls.js', 'client-core/iso-view.js', 'client-core/palette.js',
+  'client-core/menu.js', 'client-core/save.js',
+  'shared/terrain.js', 'shared/chunk.js', 'shared/pool.js',
+  'shared/objects.js', 'shared/hash.js',
 ];
 
 self.addEventListener('install', (e) => {
