@@ -23,18 +23,37 @@ export function viewSize() {                             // сколько ко�
   };                                                     // конец объекта
 }                                                        // конец viewSize
 
-export function spawn() {                                // начало игры
-  start();                                               // выбираем случайный чанк
-  const mid = CHUNK / 2;                                 // середина чанка
-  let best = Infinity;                                   // лучшее расстояние до центра
-  for (let y = 0; y < CHUNK; y++) {                      // перебираем строки
-    for (let x = 0; x < CHUNK; x++) {                    // перебираем столбцы
-      if (at(x, y) <= SEA || blocked(x, y)) continue;    // вода или занятая клетка — пропускаем
-      const d = Math.abs(x - mid) + Math.abs(y - mid);   // расстояние до центра
-      if (d < best) { best = d; player.x = x; player.y = y; }   // ближе — запоминаем
-    }                                                    // конец цикла по x
-  }                                                      // конец цикла по y
-}                                                        // конец spawn
+export const inventory = {};                             // id предмета -> количество
+
+function placeNearCenter() {
+  const mid = CHUNK / 2;
+  let best = Infinity;
+  for (let y = 0; y < CHUNK; y++) {
+    for (let x = 0; x < CHUNK; x++) {
+      if (at(x, y) <= SEA || blocked(x, y)) continue;
+      const d = Math.abs(x - mid) + Math.abs(y - mid);
+      if (d < best) { best = d; player.x = x; player.y = y; }
+    }
+  }
+}
+
+export function spawn() {                                // новая игра
+  start();
+  placeNearCenter();
+}
+
+export function snapshot() {                             // что сохраняем
+  return { chunk: world.cur.id, x: player.x, y: player.y, inv: inventory };
+}
+
+export function resume(s) {                              // продолжить с сохранения (или начать новую)
+  if (!s) return spawn();
+  restore(s.chunk);
+  player.x = s.x; player.y = s.y;
+  for (const k of Object.keys(inventory)) delete inventory[k];
+  Object.assign(inventory, s.inv);
+  if (at(s.x, s.y) <= SEA) placeNearCenter();            // на случай испорченного сохранения
+}
 
 export function tryMove(dx, dy) {                        // попытка шагнуть на (dx, dy)
   let nx = player.x + dx;                                // новый x
