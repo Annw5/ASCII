@@ -55,3 +55,7 @@ export function go(dir) {                                // игрок пере�
     for (let i = 0; i < 4; i++) if (!loaded.has(c.links[i])) c.links[i] = -1;   // нет в памяти — связь забыта
   }                                                      // конец цикла
 }                                                        // конец go
+export function restore(id) {                            // загрузить конкретный чанк (для сохранения)
+  loaded.clear();
+  world.cur = load(id);
+}
