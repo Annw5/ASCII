@@ -1,34 +1,35 @@
-export class CanvasRenderer {                            // класс: рисует Screen на холсте
-  constructor(canvas) {                                  // запускается при создании
-    this.canvas = canvas;                                // запоминаем холст
-    this.ctx = canvas.getContext('2d');                  // ctx — «кисть» для рисования
-    this.cw = 10;                                        // ширина клетки в пикселях (потом пересчитаем)
-    this.ch = 20;                                        // высота клетки в пикселях
-  }                                                      // конец constructor
+export class CanvasRenderer {
+  constructor(canvas, stage) {
+    this.canvas = canvas;
+    this.stage = stage;                                  // область, в которую вписываем игру
+    this.ctx = canvas.getContext('2d');
+    this.cw = 10;
+    this.ch = 20;
+  }
 
-  fit(cols, rows) {                                      // подобрать размер символа, чтобы cols x rows влезло в окно
-    const byHeight = window.innerHeight / rows;          // какая высота клетки подходит по высоте окна
-    const byWidth = (window.innerWidth / cols) * 2;      // какая подходит по ширине (клетка вдвое выше, чем шире)
-    let ch = Math.floor(Math.min(byHeight, byWidth));    // берём меньшую, чтобы влезло и там и там
-    ch = Math.max(8, ch - (ch % 2));                     // не меньше 8 и чётное, чтобы половина была целой
-    this.ch = ch;                                        // запоминаем высоту клетки
-    this.cw = ch / 2;                                    // ширина клетки — ровно половина высоты
+  fit(cols, rows) {
+    const availW = this.stage.clientWidth || window.innerWidth;
+    const availH = this.stage.clientHeight || window.innerHeight;
+    const byHeight = availH / rows;
+    const byWidth = (availW / cols) * 2;
+    let ch = Math.floor(Math.min(byHeight, byWidth));
+    ch = Math.max(8, ch - (ch % 2));
+    this.ch = ch;
+    this.cw = ch / 2;
 
-    const w = cols * this.cw;                            // ширина всей картинки в пикселях
-    const h = rows * this.ch;                            // высота всей картинки в пикселях
-    const dpr = window.devicePixelRatio || 1;            // плотность пикселей экрана (на «ретине» больше 1)
-    this.canvas.width = w * dpr;                         // реальный размер холста
-    this.canvas.height = h * dpr;                        // реальная высота холста
-    this.canvas.style.width = w + 'px';                  // размер на странице
-    this.canvas.style.height = h + 'px';                 // высота на странице
-    this.canvas.style.marginLeft = Math.floor((window.innerWidth - w) / 2) + 'px';   // отступ слева — центрируем по ширине
-    this.canvas.style.marginTop = Math.floor((window.innerHeight - h) / 2) + 'px';   // отступ сверху — центрируем по высоте
+    const w = cols * this.cw;
+    const h = rows * this.ch;
+    const dpr = window.devicePixelRatio || 1;
+    this.canvas.width = w * dpr;
+    this.canvas.height = h * dpr;
+    this.canvas.style.width = w + 'px';
+    this.canvas.style.height = h + 'px';
 
-    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);         // масштаб кисти под dpr (после смены размера он сбрасывается)
-    this.ctx.font = `${Math.floor(this.ch * 0.8)}px monospace`;   // шрифт: 80% от высоты клетки
-    this.ctx.textAlign = 'center';                       // текст по центру клетки по горизонтали
-    this.ctx.textBaseline = 'middle';                    // и по вертикали
-  }                                                      // конец fit
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.ctx.font = `${Math.floor(this.ch * 0.8)}px monospace`;
+    this.ctx.textAlign = 'center';
+    this.ctx.textBaseline = 'middle';
+  }
 
   draw(screen) {                                         // нарисовать экран-буфер на холсте
     const ctx = this.ctx;                                // короткое имя для кисти
