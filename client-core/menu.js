@@ -21,7 +21,7 @@ export function renderMenu(screen) {
 // k — нормализованная клавиша ('w', 's', 'enter', '1', '2'). Возвращает 'single' | 'online' | null
 export function menuKey(k) {
   menu.note = '';
-  if (k === 'w') menu.sel = (menu.sel + 1) % MODES.length;
+ if (k === 'w') menu.sel = (menu.sel + MODES.length - 1) % MODES.length;
   else if (k === 's') menu.sel = (menu.sel + 1) % MODES.length;
   else if (k === 'enter') return MODES[menu.sel];
   else if (k === '1') return MODES[0];
