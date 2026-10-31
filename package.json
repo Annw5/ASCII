@@ -1,5 +1,10 @@
 {
+  "name": "ascii-game",
   "type": "module",
-  "scripts": { "start": "node server/index.js" },
+  "bin": { "ascii": "client-term/main.js" },
+  "scripts": {
+    "start": "node server/index.js",
+    "play": "node client-term/main.js"
+  },
   "dependencies": { "ws": "^8.18.0" }
 }
