@@ -2,16 +2,81 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
   <title>ASCII</title>
   <style>
-    /* Убираем отступы и полосы прокрутки, фон — как «пустота» в игре */
-    body { margin: 0; background: #000; overflow: hidden; }
-    canvas { display: block; }
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; overscroll-behavior: none; }
+    body {
+      display: grid; height: 100dvh;
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: minmax(0, 1fr);
+      grid-template-areas: "stage";
+    }
+    #stage { grid-area: stage; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    canvas { display: block; flex: none; }
+
+    /* ---------- сенсорное управление ---------- */
+    .pad { display: none; }
+    body.touch {
+      --b: min(15vw, 15dvh);                 /* размер кнопки */
+      -webkit-user-select: none; user-select: none;
+      -webkit-touch-callout: none; touch-action: none;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: minmax(0, 1fr) auto;
+      grid-template-areas: "stage stage" "padl padr";
+    }
+    body.touch .pad {
+      display: grid; gap: 4px; justify-self: center; align-self: center;
+      grid-template-columns: repeat(3, var(--b));
+      grid-template-rows: repeat(3, var(--b));
+      padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+    }
+    #padl { grid-area: padl; }
+    #padr { grid-area: padr; }
+
+    .btn {
+      margin: 0; padding: 0; border-radius: 50%;
+      border: 2px solid #3a4a5a; background: rgba(40, 60, 80, .55);
+      color: #9fe8ff; font: 700 calc(var(--b) * .42) monospace;
+      touch-action: none; -webkit-tap-highlight-color: transparent;
+    }
+    .btn.on { background: rgba(77, 225, 255, .5); color: #fff; }
+    #menuBtn { color: #ffe14d; font-size: calc(var(--b) * .34); }
+
+    /* горизонтальный режим: блоки по бокам от игры */
+    @media (orientation: landscape) {
+      body.touch {
+        --b: min(22dvh, 9.5vw);
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        grid-template-rows: minmax(0, 1fr);
+        grid-template-areas: "padl stage padr";
+      }
+      body.touch .pad { padding: 0 8px; }
+      body.touch #padl { padding-left: calc(8px + env(safe-area-inset-left)); }
+      body.touch #padr { padding-right: calc(8px + env(safe-area-inset-right)); }
+    }
   </style>
 </head>
 <body>
-  <canvas id="game"></canvas>
-  <!-- type="module" разрешает использовать import внутри main.js -->
+  <div id="stage"><canvas id="game"></canvas></div>
+
+  <!-- левый блок: диагональные шаги + кнопка меню в центре -->
+  <div class="pad" id="padl">
+    <button type="button" class="btn" data-key="q" style="grid-area:1/1">↖</button>
+    <button type="button" class="btn" data-key="e" style="grid-area:1/3">↗</button>
+    <button type="button" class="btn" id="menuBtn" data-key="menu" style="grid-area:2/2">☰</button>
+    <button type="button" class="btn" data-key="z" style="grid-area:3/1">↙</button>
+    <button type="button" class="btn" data-key="c" style="grid-area:3/3">↘</button>
+  </div>
+
+  <!-- правый блок: W A S D крестом -->
+  <div class="pad" id="padr">
+    <button type="button" class="btn" data-key="w" style="grid-area:1/2">↑</button>
+    <button type="button" class="btn" data-key="a" style="grid-area:2/1">←</button>
+    <button type="button" class="btn" data-key="d" style="grid-area:2/3">→</button>
+    <button type="button" class="btn" data-key="s" style="grid-area:3/2">↓</button>
+  </div>
+
   <script type="module" src="client-web/main.js"></script>
 </body>
 </html>
