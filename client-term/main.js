@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { homedir, userInfo } from 'node:os';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
