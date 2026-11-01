@@ -88,9 +88,9 @@ process.stdin.on('data', (buf) => {
     else if (m === 'save') toggleSave();
   } else if (k === 'escape') {
     if (ui.list) ui.list = false; else backToMenu();
-  } else if (k === 'i') {
+   } else if (k === 'i') {
     ui.list = !ui.list;
-  } else if (!ui.list) {
+  } else {
     const m = MOVES.find((m) => m.key === k);
     if (m) {
       if (mode === 'single') { tryMove(m.dx, m.dy); saveNow(); }
