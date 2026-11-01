@@ -53,12 +53,11 @@ function hAt(chunk, x, y) {
   return v > SEA ? v : SEA;
 }
 
-export function drawIso(screen, chunk, player, objs, mobs) {
+export function drawIso(screen, chunk, player, objs, mobs, cx = screen.w >> 1) {
   const occ = new Map();
   for (const m of mobs) occ.set(m.y * CHUNK + m.x, m.kind);
   const H2 = (MAXH + 1) >> 1;
   const baseRow = ((screen.h - (H2 + CHUNK)) >> 1) + H2;
-  const cx = screen.w >> 1;
   let pCol = -1, pRow = -1;
 
   for (let s = 0; s <= CHUNK * 2 - 2; s++) {
@@ -100,26 +99,26 @@ export function drawIso(screen, chunk, player, objs, mobs) {
   if (pCol >= 0) screen.put(pCol, pRow, '@', 0xffe14d, 0);
 }
 
-// ---------- список существ ----------
+// ---------- список существ (боковая панель) ----------
 export const ui = { list: false };
+export const PANEL = 40;                     // ширина панели в клетках
 
-export function drawMobList(screen, mobs) {
-  screen.clear(0x000000);
-  screen.text(1, 0, ' Существа в чанке (I или Esc — закрыть) ', 0x4de1ff);
-  screen.text(1, 2, '  ' + 'Кто'.padEnd(12) + 'HP'.padEnd(7) + 'Клетка'.padEnd(9) + 'Что делает', 0x888888);
+export function drawMobList(screen, mobs, x0) {
+  const x = x0 + 1, w = PANEL - 2;
+  screen.text(x, 0, `Существа: ${mobs.length} (I — закрыть)`, 0x4de1ff);
+  screen.text(x, 2, '  ' + 'Кто'.padEnd(10) + 'HP'.padEnd(5) + 'Клетка', 0x888888);
   const list = [...mobs].sort((a, b) => (b.kind === NPC) - (a.kind === NPC) || a.kind - b.kind);
-  if (!list.length) screen.text(1, 4, 'Здесь никого нет', 0x777777);
+  if (!list.length) screen.text(x, 4, 'Здесь никого нет', 0x777777);
   list.forEach((m, i) => {
-    const y = 3 + i;
-    if (y >= screen.h - 2) return;
+    const y = 3 + i * 2;
+    if (y >= screen.h - 1) return;
     const k = MOB_KINDS[m.kind];
-    screen.text(1, y, k.glyph, k.color);
-    screen.text(3, y, k.name.padEnd(12), k.color);
-    screen.text(15, y, (m.kind === NPC ? '∞' : `${m.hp}/${m.maxHp}`).padEnd(7), 0xff8080);
-    screen.text(22, y, `${m.x},${m.y}`.padEnd(9), 0x888888);
-    screen.text(31, y, m.act || '', 0xcccccc);
+    screen.text(x, y, k.glyph, k.color);
+    screen.text(x + 2, y, k.name.padEnd(10), k.color);
+    screen.text(x + 12, y, (m.kind === NPC ? '∞' : `${m.hp}/${m.maxHp}`).padEnd(5), 0xff8080);
+    screen.text(x + 17, y, `${m.x},${m.y}`, 0x888888);
+    screen.text(x + 2, y + 1, (m.act || '').slice(0, w - 2), 0xaaaaaa);
   });
-  screen.text(1, screen.h - 1, ` Всего: ${list.length} `, 0x888888);
 }
 
 // ---------- меню ----------
