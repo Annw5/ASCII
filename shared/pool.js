@@ -12,12 +12,12 @@ function load(id) {                                      // получить ч�
   const heights = makeChunk(id * 37, id * 61);           // высоты; место в мире зависит от номера
   const objs = makeObjects(id, heights);                 // деревья и камни
   const c = {                                            // новый чанк — объект с полями
-    id,                                                  // номер в листе
-    heights,                                             // высоты
-    objs,                                                // неподвижные предметы
-    mobs: makeMobs(id, heights, objs),                   // звери и NPC
-    links: [-1, -1, -1, -1],                             // соседи по сторонам N, E, S, W; -1 — пока никого
-  };                                                     // конец объекта
+    id, heights, objs,
+    mobs: makeMobs(id, heights, objs).map((m) => makeMob(m.x, m.y, m.kind)),
+    links: [-1, -1, -1, -1],
+    players: new Set(),
+    respawn: [],
+  };
   loaded.set(id, c);                                     // запоминаем в словаре
   return c;                                              // отдаём
 }                                                        // конец load
