@@ -3,7 +3,18 @@ import { SEA, MAXH } from '../shared/terrain.js';        // уровень мо�
 import { CHUNK } from '../shared/chunk.js';              // размер чанка
 import { drawIso } from './iso-view.js';                 // функция рисования чанка
 
-export const player = { x: 0, y: 0 };                    // игрок: координаты внутри текущего чанка
+import { tickChunk } from '../shared/ai.js';
+import { clock, mobAt, hit } from '../shared/mob.js';
+import { MOB_KINDS } from '../shared/objects.js';
+
+export const player = { id: 0, name: 'Путник', x: 0, y: 0 };   // id и name нужны NPC
+
+export function tickGame() {                             // один ход мира, вызывается по таймеру
+  const c = world.cur;
+  c.players.clear();
+  c.players.add(player);
+  tickChunk(c, ++clock.tick);
+}
 
 function at(x, y) {                                      // высота клетки (x, y) текущего чанка
   return world.cur.heights[y * CHUNK + x];               // номер в списке = строка * ширина + столбец
@@ -72,6 +83,9 @@ export function tryMove(dx, dy) {                        // попытка ша�
     return;                                              // шаг сделан, выходим
   }                                                      // конец if
 
+    const target = mobAt(world.cur, nx, ny);
+  if (target) { hit(world.cur, target, clock.tick); return; }   // шаг в зверя = удар
+
   const next = at(nx, ny);                               // высота клетки, куда шагаем (объявляем ДО использования)
   if (next > SEA && Math.abs(next - at(player.x, player.y)) <= 1 && !blocked(nx, ny)) {   // не вода, перепад ≤ 1, клетка свободна
     player.x = nx;                                       // шагаем
@@ -84,4 +98,6 @@ export function renderGame(screen) {                     // нарисовать
     drawIso(screen, world.cur.heights, player, world.cur.objs, world.cur.mobs);   // передаём ещё предметы (objs) и существ (mobs)
   const h = at(player.x, player.y);                      // высота под игроком
   screen.text(1, 0, ` chunk:${world.cur.id} x:${player.x} y:${player.y} h:${h} `, 0x888888);   // подпись
+    const talker = world.cur.mobs.find((m) => m.say);
+  if (talker) screen.text(1, screen.h - 1, ` ${MOB_KINDS[talker.kind].name}: ${talker.say} `, 0x4de1ff);
 }                                                        // конец renderGame
