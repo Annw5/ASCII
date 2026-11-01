@@ -1,8 +1,7 @@
 import { CHUNK, makeChunk } from '../shared/chunk.js';
 import { SEA } from '../shared/terrain.js';
 import { makeObjects, makeMobs } from '../shared/objects.js';
-
-import { makeMob, occupied, canStep, newId, clock, mobAt, hit } from '../shared/mob.js';
+import { makeMob, occupied, canStep, newId, clock, mobAt, interact } from '../shared/mob.js';
 export { makeMob, occupied, canStep, newId, clock };     // остальные файлы импортируют их отсюда
 
 export const POOL = 100;
@@ -84,7 +83,7 @@ export function movePlayer(p, dx, dy) {      // false — не пошёл, true 
     return 'chunk';
   }
     const target = mobAt(c, nx, ny);
-  if (target) { hit(c, target, clock.tick); return 'hit'; }
+  if (target) { interact(c, target, p, clock.tick); return 'hit'; }
   if (!canStep(c, p.x, p.y, nx, ny)) return false;
   p.x = nx; p.y = ny;
   return true;
