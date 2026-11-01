@@ -28,8 +28,11 @@ function setup() {
   screen = new Screen(cols, rows);
 }
 
+function setList(v) { ui.list = v; setup(); }    // панель меняет ширину экрана
+
 function render() {
-  if (mode === 'menu') { ui.list = false; renderMenu(screen); }
+  if (mode === 'menu' && ui.list) setList(false);
+  if (mode === 'menu') renderMenu(screen);
   else if (mode === 'single') renderGame(screen);
   else renderOnline(screen);
   renderer.draw(screen);
@@ -125,9 +128,8 @@ function handleKey(k) {
     render();
     return true;
   }
-  if (k === 'escape') { if (ui.list) ui.list = false; else backToMenu(); render(); return true; }
-  if (k === 'i') { ui.list = !ui.list; render(); return true; }
-  if (ui.list) return true;
+  if (k === 'escape') { if (ui.list) setList(false); else backToMenu(); render(); return true; }
+  if (k === 'i') { setList(!ui.list); render(); return true; }
 
   const m = MOVES.find((m) => m.key === k);
   if (!m) return false;
