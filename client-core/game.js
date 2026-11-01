@@ -1,11 +1,12 @@
 import { CHUNK, SEA, MAXH, POOL, MOB_KINDS } from '../shared/world.js';
 import { newChunk, tickChunk, clock, mobAt, interact } from '../shared/mob.js';
-import { drawIso, drawMobList, ui } from './view.js';
+import { drawIso, drawMobList, ui, PANEL } from './view.js';
 
 // ---------- пул чанков (одиночная игра) ----------
 const N = 0, E = 1, S = 2, W = 3;
 const loaded = new Map();
 export const world = { cur: null };
+
 
 function load(id) {
   if (!loaded.has(id)) loaded.set(id, newChunk(id));
@@ -48,7 +49,7 @@ function blocked(x, y) {
 }
 
 export function viewSize() {
-  return { cols: CHUNK * 2 + 4, rows: ((MAXH + 1) >> 1) + CHUNK + 6 };
+  return { cols: CHUNK * 2 + 4 + (ui.list ? PANEL : 0), rows: ((MAXH + 1) >> 1) + CHUNK + 6 };
 }
 
 function placeNearCenter() {
@@ -108,10 +109,15 @@ export function tryMove(dx, dy) {
   }
 }
 
+function scene(screen, chunk, p, objs, mobs) {   // игра слева, список справа
+  const w = ui.list ? screen.w - PANEL : screen.w;
+  drawIso(screen, chunk, p, objs, mobs, w >> 1);
+  if (ui.list) drawMobList(screen, mobs, w);
+}
+
 export function renderGame(screen) {
   screen.clear(0x000000);
-  if (ui.list) { drawMobList(screen, world.cur.mobs); return; }
-  drawIso(screen, world.cur.heights, player, world.cur.objs, world.cur.mobs);
+  scene(screen, world.cur.heights, player, world.cur.objs, world.cur.mobs);
   screen.text(1, 0, ` chunk:${world.cur.id} x:${player.x} y:${player.y} h:${at(player.x, player.y)}  I — список `, 0x888888);
   const talker = world.cur.mobs.find((m) => m.say && m.sayTo === player.id);
   if (talker) screen.text(1, screen.h - 1, ` ${MOB_KINDS[talker.kind].name}: ${talker.say} `, 0x4de1ff);
@@ -159,8 +165,7 @@ export function onMessage(msg) {
 export function renderOnline(screen) {
   screen.clear(0x000000);
   if (!st.ready) { screen.text(1, 1, 'подключение...', 0x888888); return; }
-  if (ui.list) { drawMobList(screen, st.mobs); return; }
-  drawIso(screen, st.heights, net, st.objs, st.mobs);
+  scene(screen, st.heights, net, st.objs, st.mobs);
   screen.text(1, 0, ` chunk:${st.id} x:${net.x} y:${net.y} h:${st.heights[net.y * CHUNK + net.x]}  I — список `, 0x888888);
   const talker = st.mobs.find((m) => m.say);
   if (talker) screen.text(1, screen.h - 1, ` ${MOB_KINDS[talker.kind].name}: ${talker.say} `, 0x4de1ff);
