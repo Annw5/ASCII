@@ -1,12 +1,12 @@
 import { Screen } from '../client-core/screen.js';
+import { viewSize, resume, tryMove, renderGame, snapshot, tickGame } from '../client-core/game.js';
 import { onMessage, renderOnline } from '../client-core/online.js';
 import { MOVES, ALIAS } from '../client-core/controls.js';
 import { menu, renderMenu, menuKey } from '../client-core/menu.js';
 import { encode, decode } from '../client-core/save.js';
 import { CanvasRenderer } from './canvas-renderer.js';
-import { viewSize, resume, tryMove, renderGame, snapshot, tickGame } from '../client-core/game.js';
-import { TICK_MS } from '../shared/constants.js';
 import * as saveFile from './save-file.js';
+import { TICK_MS } from '../shared/constants.js';
 
 const SAVE_KEY = 'ascii-save';
 const FLAG_KEY = 'ascii-save-file';                      // включено ли «сохранение в файл»
