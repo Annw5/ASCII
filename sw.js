@@ -1,7 +1,7 @@
-const CACHE = 'ascii-v2';
+const CACHE = 'ascii-v3';
 const FILES = [
   './', 'index.html',
-  'client-web/main.js', 'client-web/canvas-renderer.js',
+  'client-web/main.js', 'client-web/canvas-renderer.js', 'client-web/save-file.js',
   'client-core/screen.js', 'client-core/game.js', 'client-core/online.js',
   'client-core/controls.js', 'client-core/iso-view.js', 'client-core/palette.js',
   'client-core/menu.js', 'client-core/save.js',
