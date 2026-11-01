@@ -1,4 +1,4 @@
-const CACHE = 'ascii-v3';
+const CACHE = 'ascii-v4';
 const FILES = [
   './', 'index.html',
   'client-web/main.js', 'client-web/canvas-renderer.js', 'client-web/save-file.js',
@@ -6,7 +6,7 @@ const FILES = [
   'client-core/controls.js', 'client-core/iso-view.js', 'client-core/palette.js',
   'client-core/menu.js', 'client-core/save.js',
   'shared/terrain.js', 'shared/chunk.js', 'shared/pool.js',
-  'shared/objects.js', 'shared/hash.js',
+  'shared/objects.js', 'shared/hash.js', 'shared/ai.js', 'shared/mob.js', 'shared/constants.js',
 ];
 
 self.addEventListener('install', (e) => {
