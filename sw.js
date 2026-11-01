@@ -1,10 +1,10 @@
-const CACHE = 'ascii-v4';
+const CACHE = 'ascii-v5';
 const FILES = [
   './', 'index.html',
   'client-web/main.js', 'client-web/canvas-renderer.js', 'client-web/save-file.js',
   'client-core/screen.js', 'client-core/game.js', 'client-core/online.js',
   'client-core/controls.js', 'client-core/iso-view.js', 'client-core/palette.js',
-  'client-core/menu.js', 'client-core/save.js',
+  'client-core/menu.js', 'client-core/save.js', 'client-core/mob-list.js',
   'shared/terrain.js', 'shared/chunk.js', 'shared/pool.js',
   'shared/objects.js', 'shared/hash.js', 'shared/ai.js', 'shared/mob.js', 'shared/constants.js',
 ];
