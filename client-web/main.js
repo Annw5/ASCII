@@ -1,5 +1,4 @@
 import { Screen } from '../client-core/screen.js';
-import { viewSize, resume, tryMove, renderGame, snapshot } from '../client-core/game.js';
 import { onMessage, renderOnline } from '../client-core/online.js';
 import { MOVES, ALIAS } from '../client-core/controls.js';
 import { menu, renderMenu, menuKey } from '../client-core/menu.js';
