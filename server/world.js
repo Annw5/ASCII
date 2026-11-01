@@ -1,20 +1,17 @@
 import { CHUNK, makeChunk } from '../shared/chunk.js';
 import { SEA } from '../shared/terrain.js';
-import { makeObjects, makeMobs } from '../shared/objects.js';
+import { makeObjects, } from '../shared/objects.js';
+
+import { makeMob, occupied, canStep, newId, clock, mobAt, hit } from '../shared/mob.js';
+export { makeMob, occupied, canStep, newId, clock };     // остальные файлы импортируют их отсюда
 
 export const POOL = 100;
 export const N = 0, E = 1, S = 2, W = 3;
 
 const chunks = new Map();                    // на сервере чанки не выгружаются: их всего 100
 export const players = new Map();            // id -> игрок {id, name, ws, chunk, x, y}
-export const clock = { tick: 0 };
 
 let nextId = 1;
-export const newId = () => nextId++;
-
-export function makeMob(x, y, kind) {
-  return { id: newId(), x, y, kind, home: { x, y }, mem: new Map(), say: null, sayUntil: 0, fed: 0, dead: false };
-}
 
 export function getChunk(id) {
   let c = chunks.get(id);
@@ -46,19 +43,6 @@ export function neighbor(from, dir) {        // сосед по стороне d
   from.links[dir] = to.id;
   to.links[opp] = from.id;
   return to;
-}
-
-export function occupied(c, x, y) {
-  if (c.objs[y * CHUNK + x] !== 0) return true;
-  for (const m of c.mobs) if (m.x === x && m.y === y) return true;
-  for (const p of c.players) if (p.x === x && p.y === y) return true;
-  return false;
-}
-
-export function canStep(c, x, y, nx, ny) {   // те же правила, что в клиентском tryMove
-  const h = c.heights;
-  const next = h[ny * CHUNK + nx];
-  return next > SEA && Math.abs(next - h[y * CHUNK + x]) <= 1 && !occupied(c, nx, ny);
 }
 
 export function join(p) {
@@ -99,6 +83,8 @@ export function movePlayer(p, dx, dy) {      // false — не пошёл, true 
     p.chunk = to; p.x = nx; p.y = ny;
     return 'chunk';
   }
+    const target = mobAt(c, nx, ny);
+  if (target) { hit(c, target, clock.tick); return 'hit'; }
   if (!canStep(c, p.x, p.y, nx, ny)) return false;
   p.x = nx; p.y = ny;
   return true;
