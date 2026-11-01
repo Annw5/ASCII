@@ -9,6 +9,7 @@ import { MOVES } from '../client-core/controls.js';
 import { menu, renderMenu, menuKey } from '../client-core/menu.js';
 import { encode, decode } from '../client-core/save.js';
 import { TICK_MS } from '../shared/constants.js';
+import { ui } from '../client-core/mob-list.js';
 
 const out = process.stdout;
 let screen = new Screen(out.columns, out.rows);
@@ -16,7 +17,7 @@ let mode = 'menu';
 let ws = null;
 
 function render() {
-  if (mode === 'menu') renderMenu(screen);
+  if (mode === 'menu') { ui.list = false; renderMenu(screen); }
   else if (mode === 'single') renderGame(screen);
   else renderOnline(screen);
   out.write(screen.diff());
@@ -84,7 +85,17 @@ process.stdin.on('data', (key) => {
   const raw = key.toString();
   const k = KEYS[raw] ?? raw.toLowerCase();
   if (k === 'ctrl-c') return quit();
-
+  } else if (k === 'escape') {
+    if (ui.list) ui.list = false; else backToMenu();
+  } else if (k === 'i') {
+    ui.list = !ui.list;
+  } else if (!ui.list) {
+    const m = MOVES.find((m) => m.key === k);
+    if (m) {
+      if (mode === 'single') { tryMove(m.dx, m.dy); saveNow(); }
+      else if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: 'move', dx: m.dx, dy: m.dy }));
+    }
+  }
   if (mode === 'menu') {
     if (k === 'escape' || k === 'q') return quit();
     const m = menuKey(k);
