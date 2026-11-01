@@ -1,7 +1,7 @@
-import { CHUNK } from '../shared/chunk.js';
-import { SEA } from '../shared/terrain.js';
-import { MOB_KINDS, NPC } from '../shared/objects.js';
-import { canStep, occupied, makeMob } from './world.js';
+import { CHUNK } from './chunk.js';
+import { SEA } from './terrain.js';
+import { MOB_KINDS, NPC } from './objects.js';
+import { canStep, occupied, makeMob } from './mob.js';
 
 const DIRS = [[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]];
 const PREDATORS = new Set(['волк','лиса','медведь','рысь','тигр','шакал','ирбис','песец','хорёк','сова']);
@@ -20,11 +20,11 @@ function nearest(list, from, maxD) {
   return best;
 }
 
-function okCell(c, x, y) {                   // звери не выходят к краю чанка и не лезут в воду и на песок
+function okCell(c, x, y) {
   return x >= 2 && y >= 2 && x < CHUNK - 2 && y < CHUNK - 2 && c.heights[y * CHUNK + x] > SEA + 1;
 }
 
-function step(c, m, tx, ty, away = false) { // один шаг к точке (или от неё)
+function step(c, m, tx, ty, away = false) {
   let best = null, bd = away ? -1 : Infinity;
   for (const [dx, dy] of DIRS) {
     const nx = m.x + dx, ny = m.y + dy;
@@ -60,22 +60,28 @@ function hunter(c, m, tick) {
   step(c, m, target.x, target.y);
 }
 
+// Жертва: от хищников бежит всегда, от игроков — только если её ударили
 function prey(c, m, tick, players, preds) {
-  const threat = nearest([...players, ...preds], m, 5);
+  const hurt = m.hurt > tick;
+  const threat = nearest(hurt ? [...players, ...preds] : preds, m, hurt ? 8 : 5);
   if (threat) {
-    if ((tick + m.id) % 3 !== 0) step(c, m, threat.x, threat.y, true);   // бежит на 1/3 медленнее хищника
+    if (hurt || (tick + m.id) % 3 !== 0) step(c, m, threat.x, threat.y, true);   // раненый бежит без поддавков
     return;
   }
   wander(c, m);
 }
 
 function npc(c, m, tick, players, preds) {
+  if (m.hurt > tick) {                                   // ударили — убегает от игрока
+    const p = nearest(players, m, 8);
+    if (p) { say(m, 'Ай! Не бей меня!', tick); step(c, m, p.x, p.y, true); return; }
+  }
   const pr = nearest(preds, m, 4);
   if (pr) { say(m, `Ой, ${MOB_KINDS[pr.kind].name}!`, tick); step(c, m, pr.x, pr.y, true); return; }
   const p = nearest(players, m, 8);
   if (!p) return wander(c, m);
   if (dist(m, p) > 2) { step(c, m, p.x, p.y); return; }
-  const seen = m.mem.get(p.id);              // память: кого и когда NPC уже приветствовал
+  const seen = m.mem.get(p.id);
   if (!seen || tick - seen.last > 120) {
     const n = seen ? seen.n : 0;
     say(m, n === 0 ? `Привет, ${p.name}!` : `Опять ты, ${p.name}!`, tick);
@@ -91,7 +97,7 @@ function respawn(c, tick) {
       const y = 2 + Math.floor(Math.random() * (CHUNK - 4));
       if (okCell(c, x, y) && !occupied(c, x, y)) { c.mobs.push(makeMob(x, y, r.kind)); return false; }
     }
-    return true;                             // места не нашлось — попробуем на следующем ходу
+    return true;
   });
 }
 
@@ -100,6 +106,7 @@ export function tickChunk(c, tick) {
   const players = [...c.players];
   const preds = c.mobs.filter(isPred);
   for (const m of [...c.mobs]) {
+    if (m.say && tick >= m.sayUntil) m.say = null;       // реплика исчезает сама
     if (m.dead) continue;
     if (isNpc(m)) npc(c, m, tick, players, preds);
     else if (isPred(m)) hunter(c, m, tick);
