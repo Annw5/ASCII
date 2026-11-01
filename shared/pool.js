@@ -1,4 +1,5 @@
 import { makeChunk } from './chunk.js';                  // функция создания чанка
+import { makeMob } from './mob.js';
 import { makeObjects, makeMobs } from './objects.js';    // деревья, камни, существа
 
 export const POOL = 100;                                 // сколько всего чанков в «листе в клеточку»
