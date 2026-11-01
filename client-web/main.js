@@ -26,6 +26,13 @@ if (matchMedia('(pointer: coarse)').matches || /[?&]touch\b/.test(location.searc
   document.body.classList.add('touch');
 }
 
+import { ui } from '../client-core/mob-list.js';
+
+function render() {
+  if (mode === 'menu') { ui.list = false; renderMenu(screen); }
+  else if (mode === 'single') renderGame(screen);
+  else renderOnline(screen);
+  
 function setup() {
   const { cols, rows } = viewSize();
   renderer.fit(cols, rows);
@@ -135,7 +142,10 @@ function handleKey(k) {
     render();
     return true;
   }
-  if (k === 'escape') { backToMenu(); render(); return true; }
+  
+  if (k === 'escape') { if (ui.list) ui.list = false; else backToMenu(); render(); return true; }
+  if (k === 'i') { ui.list = !ui.list; render(); return true; }
+  if (ui.list) return true;                              // пока открыт список, шаги не работают
 
   const m = MOVES.find((m) => m.key === k);
   if (!m) return false;
@@ -168,6 +178,7 @@ const REPEAT_MS = 160;                                   // как часто ш
 function keyOf(btn) {
   const k = btn.dataset.key;
   return k === 'menu' ? (mode === 'menu' ? 'enter' : 'escape') : k;
+  if (btn.dataset.key !== 'menu' && btn.dataset.key !== 'i' && mode !== 'menu') {
 }
 
 for (const btn of document.querySelectorAll('.btn')) {
