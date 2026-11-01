@@ -3,18 +3,19 @@ import { homedir, userInfo } from 'node:os';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Screen } from '../client-core/screen.js';
-import { resume, tryMove, renderGame, snapshot, tickGame } from '../client-core/game.js';
-import { onMessage, renderOnline } from '../client-core/online.js';
-import { MOVES } from '../client-core/controls.js';
-import { menu, renderMenu, menuKey } from '../client-core/menu.js';
-import { encode, decode } from '../client-core/save.js';
-import { TICK_MS } from '../shared/constants.js';
-import { ui } from '../client-core/mob-list.js';
+import { ui, MOVES, menu, renderMenu, menuKey } from '../client-core/view.js';
+import { resume, tryMove, renderGame, snapshot, tickGame, encode, decode, onMessage, renderOnline } from '../client-core/game.js';
+import { TICK_MS } from '../shared/world.js';
 
 const out = process.stdout;
 let screen = new Screen(out.columns, out.rows);
 let mode = 'menu';
 let ws = null;
+
+const SAVE_FILE = join(homedir(), '.ascii-save');
+const SETTINGS_FILE = join(homedir(), '.ascii-settings');
+let cache = null;                            // «кеш»: последнее сохранение в памяти
+try { menu.save = readFileSync(SETTINGS_FILE, 'utf8').trim() === 'save=1'; } catch {}
 
 function render() {
   if (mode === 'menu') { ui.list = false; renderMenu(screen); }
@@ -23,15 +24,10 @@ function render() {
   out.write(screen.diff());
 }
 
-const SAVE_FILE = join(homedir(), '.ascii-save');
-const SETTINGS_FILE = join(homedir(), '.ascii-settings');
-let cache = null;                                        // «кеш»: последнее сохранение в памяти программы
-try { menu.save = readFileSync(SETTINGS_FILE, 'utf8').trim() === 'save=1'; } catch {}
-
 function saveNow() {
   if (mode !== 'single') return;
-  cache = encode(snapshot());                            // кеш: всегда
-  if (menu.save) { try { writeFileSync(SAVE_FILE, cache); } catch {} }   // файл: только если включено
+  cache = encode(snapshot());
+  if (menu.save) { try { writeFileSync(SAVE_FILE, cache); } catch {} }
 }
 
 function toggleSave() {
@@ -48,8 +44,7 @@ function startSingle() {
 
 function startOnline() {
   if (typeof WebSocket === 'undefined') { menu.note = 'Для онлайна нужен Node 22+'; return; }
-  const url = process.env.ASCII_SERVER || 'ws://localhost:3000';
-  const sock = new WebSocket(url);
+  const sock = new WebSocket(process.env.ASCII_SERVER || 'ws://localhost:3000');
   ws = sock;
   mode = 'online';
   sock.onopen = () => sock.send(JSON.stringify({ t: 'hello', name: userInfo().username || 'Путник' }));
@@ -81,21 +76,10 @@ const KEYS = {
 
 process.stdin.setRawMode(true);
 process.stdin.resume();
-process.stdin.on('data', (key) => {
-  const raw = key.toString();
+process.stdin.on('data', (buf) => {
+  const raw = buf.toString();
   const k = KEYS[raw] ?? raw.toLowerCase();
   if (k === 'ctrl-c') return quit();
-  } else if (k === 'escape') {
-    if (ui.list) ui.list = false; else backToMenu();
-  } else if (k === 'i') {
-    ui.list = !ui.list;
-  } else if (!ui.list) {
-    const m = MOVES.find((m) => m.key === k);
-    if (m) {
-      if (mode === 'single') { tryMove(m.dx, m.dy); saveNow(); }
-      else if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: 'move', dx: m.dx, dy: m.dy }));
-    }
-  }
   if (mode === 'menu') {
     if (k === 'escape' || k === 'q') return quit();
     const m = menuKey(k);
@@ -103,8 +87,10 @@ process.stdin.on('data', (key) => {
     else if (m === 'online') startOnline();
     else if (m === 'save') toggleSave();
   } else if (k === 'escape') {
-    backToMenu();
-  } else {
+    if (ui.list) ui.list = false; else backToMenu();
+  } else if (k === 'i') {
+    ui.list = !ui.list;
+  } else if (!ui.list) {
     const m = MOVES.find((m) => m.key === k);
     if (m) {
       if (mode === 'single') { tryMove(m.dx, m.dy); saveNow(); }
@@ -117,5 +103,4 @@ process.stdin.on('data', (key) => {
 out.on('resize', () => { screen = new Screen(out.columns, out.rows); render(); });
 
 render();
-
 setInterval(() => { if (mode === 'single') { tickGame(); render(); } }, TICK_MS);
