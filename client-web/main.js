@@ -1,38 +1,27 @@
 import { Screen } from '../client-core/screen.js';
-import { viewSize, resume, tryMove, renderGame, snapshot, tickGame } from '../client-core/game.js';
-import { onMessage, renderOnline } from '../client-core/online.js';
-import { MOVES, ALIAS } from '../client-core/controls.js';
-import { menu, renderMenu, menuKey } from '../client-core/menu.js';
-import { encode, decode } from '../client-core/save.js';
+import { ui, MOVES, ALIAS, menu, renderMenu, menuKey } from '../client-core/view.js';
+import { viewSize, resume, tryMove, renderGame, snapshot, tickGame, encode, decode, onMessage, renderOnline } from '../client-core/game.js';
 import { CanvasRenderer } from './canvas-renderer.js';
 import * as saveFile from './save-file.js';
-import { TICK_MS } from '../shared/constants.js';
+import { TICK_MS } from '../shared/world.js';
 
 const SAVE_KEY = 'ascii-save';
-const FLAG_KEY = 'ascii-save-file';                      // включено ли «сохранение в файл»
+const FLAG_KEY = 'ascii-save-file';
 const canvas = document.getElementById('game');
 const stage = document.getElementById('stage');
 const menuBtn = document.getElementById('menuBtn');
 const renderer = new CanvasRenderer(canvas, stage);
 let screen;
-let mode = 'menu';                                       // 'menu' | 'single' | 'online'
+let mode = 'menu';                           // 'menu' | 'single' | 'online'
 let ws = null;
-let busy = false;                                        // идёт асинхронное действие (выбор файла и т.п.)
+let busy = false;
 
 try { menu.save = localStorage.getItem(FLAG_KEY) === '1'; } catch {}
 
-// сенсорный интерфейс: на телефонах/планшетах, либо вручную через ?touch
 if (matchMedia('(pointer: coarse)').matches || /[?&]touch\b/.test(location.search)) {
   document.body.classList.add('touch');
 }
 
-import { ui } from '../client-core/mob-list.js';
-
-function render() {
-  if (mode === 'menu') { ui.list = false; renderMenu(screen); }
-  else if (mode === 'single') renderGame(screen);
-  else renderOnline(screen);
-  
 function setup() {
   const { cols, rows } = viewSize();
   renderer.fit(cols, rows);
@@ -40,14 +29,14 @@ function setup() {
 }
 
 function render() {
-  if (mode === 'menu') renderMenu(screen);
+  if (mode === 'menu') { ui.list = false; renderMenu(screen); }
   else if (mode === 'single') renderGame(screen);
   else renderOnline(screen);
   renderer.draw(screen);
-  menuBtn.textContent = mode === 'menu' ? 'OK' : '☰';   // центральная кнопка: Enter в меню, Esc в игре
+  menuBtn.textContent = mode === 'menu' ? 'OK' : '☰';
 }
 
-function run(fn) {                                       // запустить асинхронное действие из меню
+function run(fn) {
   busy = true;
   fn().catch(() => {}).finally(() => { busy = false; render(); });
 }
@@ -56,23 +45,22 @@ function run(fn) {                                       // запустить �
 function saveNow() {
   if (mode !== 'single') return;
   const text = encode(snapshot());
-  try { localStorage.setItem(SAVE_KEY, text); } catch {}   // кеш: всегда
-  if (menu.save) saveFile.write(text);                   // файл: только если включено
+  try { localStorage.setItem(SAVE_KEY, text); } catch {}
+  if (menu.save) saveFile.write(text);
 }
 
 async function toggleSave() {
-  if (menu.save) {                                       // выключаем
+  if (menu.save) {
     menu.save = false;
     try { localStorage.removeItem(FLAG_KEY); } catch {}
     return;
   }
   if (saveFile.canPick) {
-    let ok = await saveFile.open(true);
-    if (!ok) { await saveFile.choose(); }                // отмена выбора -> ошибка -> галочка не включится
+    if (!(await saveFile.open(true))) await saveFile.choose();   // отмена -> ошибка -> галочка не включится
     const text = await saveFile.read();
-    if (text && decode(text)) {                          // в файле уже есть сохранение — берём его
+    if (text && decode(text)) {
       try { localStorage.setItem(SAVE_KEY, text); } catch {}
-    } else {                                             // файл пустой — кладём в него текущий прогресс
+    } else {
       let cached = null;
       try { cached = localStorage.getItem(SAVE_KEY); } catch {}
       if (cached) saveFile.write(cached);
@@ -82,23 +70,18 @@ async function toggleSave() {
   try { localStorage.setItem(FLAG_KEY, '1'); } catch {}
 }
 
-// ---------- офлайн-кеш ----------
-function prepareOffline() {
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
-}
-
 // ---------- режимы ----------
 async function startSingle() {
-  prepareOffline();
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
   let text = null;
   try { text = localStorage.getItem(SAVE_KEY); } catch {}
   if (menu.save) {
     if (saveFile.canPick) {
       if (await saveFile.open(true)) {
         const t = await saveFile.read();
-        if (t && decode(t)) text = t;                    // файл главнее кеша
+        if (t && decode(t)) text = t;
       }
-    } else if (!decode(text)) {                          // кеш пуст: просим указать скачанный файл
+    } else if (!decode(text)) {
       const t = await saveFile.pickText();
       if (t && decode(t)) text = t;
     }
@@ -125,12 +108,12 @@ function startOnline() {
 function backToMenu() {
   const wasSingle = mode === 'single';
   saveNow();
-  if (wasSingle && menu.save && !saveFile.canPick) saveFile.download(encode(snapshot()));   // запасной вариант
+  if (wasSingle && menu.save && !saveFile.canPick) saveFile.download(encode(snapshot()));
   if (ws) { const s = ws; ws = null; s.close(); }
   mode = 'menu';
 }
 
-// ---------- единая обработка нажатий (клавиатура и экранные кнопки) ----------
+// ---------- нажатия (клавиатура и экранные кнопки) ----------
 function handleKey(k) {
   if (mode === 'menu') {
     const m = menuKey(k);
@@ -142,10 +125,9 @@ function handleKey(k) {
     render();
     return true;
   }
-  
   if (k === 'escape') { if (ui.list) ui.list = false; else backToMenu(); render(); return true; }
   if (k === 'i') { ui.list = !ui.list; render(); return true; }
-  if (ui.list) return true;                              // пока открыт список, шаги не работают
+  if (ui.list) return true;
 
   const m = MOVES.find((m) => m.key === k);
   if (!m) return false;
@@ -155,15 +137,13 @@ function handleKey(k) {
 }
 
 window.addEventListener('keydown', (e) => {
-  let k = e.key.toLowerCase();
-  k = ALIAS[k] || k;
+  const k0 = e.key.toLowerCase();
   const wasMenu = mode === 'menu';
-  const handled = handleKey(k);
+  const handled = handleKey(ALIAS[k0] || k0);
   if (wasMenu || handled) e.preventDefault();
 });
 
-// ---------- нажатие по галочке «сохранение» (мышь и палец) ----------
-canvas.addEventListener('click', (e) => {
+canvas.addEventListener('click', (e) => {    // нажатие по галочке «сохранение»
   if (mode !== 'menu' || busy) return;
   const r = canvas.getBoundingClientRect();
   const col = Math.floor(((e.clientX - r.left) / r.width) * screen.w);
@@ -173,28 +153,20 @@ canvas.addEventListener('click', (e) => {
 });
 
 // ---------- экранные кнопки ----------
-const REPEAT_MS = 160;                                   // как часто шагать, пока кнопку держат
-
-function keyOf(btn) {
-  const k = btn.dataset.key;
-  return k === 'menu' ? (mode === 'menu' ? 'enter' : 'escape') : k;
-  if (btn.dataset.key !== 'menu' && btn.dataset.key !== 'i' && mode !== 'menu') {
-}
+const REPEAT_MS = 160;
+const keyOf = (btn) => btn.dataset.key === 'menu' ? (mode === 'menu' ? 'enter' : 'escape') : btn.dataset.key;
 
 for (const btn of document.querySelectorAll('.btn')) {
   let timer = 0;
   const stop = () => { clearInterval(timer); timer = 0; btn.classList.remove('on'); };
-
   btn.addEventListener('pointerdown', (e) => {
     e.preventDefault();
     btn.setPointerCapture(e.pointerId);
     btn.classList.add('on');
     handleKey(keyOf(btn));
-    if (btn.dataset.key !== 'menu' && mode !== 'menu') {
-      timer = setInterval(() => {
-        if (mode === 'menu') return stop();
-        handleKey(keyOf(btn));
-      }, REPEAT_MS);
+    const k = btn.dataset.key;
+    if (k !== 'menu' && k !== 'i' && mode !== 'menu') {
+      timer = setInterval(() => { if (mode === 'menu') return stop(); handleKey(keyOf(btn)); }, REPEAT_MS);
     }
   });
   for (const t of ['pointerup', 'pointercancel', 'lostpointercapture']) btn.addEventListener(t, stop);
@@ -203,10 +175,8 @@ for (const btn of document.querySelectorAll('.btn')) {
 
 window.addEventListener('pagehide', saveNow);
 document.addEventListener('visibilitychange', () => { if (document.hidden) saveNow(); });
-
 new ResizeObserver(() => { setup(); render(); }).observe(stage);
 
 setup();
 render();
-
 setInterval(() => { if (mode === 'single') { tickGame(); render(); } }, TICK_MS);
