@@ -9,10 +9,7 @@ import { MOVES } from '../client-core/controls.js';
 import { menu, renderMenu, menuKey } from '../client-core/menu.js';
 import { encode, decode } from '../client-core/save.js';
 import { TICK_MS } from '../shared/constants.js';
-setInterval(() => { if (mode === 'single') { tickGame(); render(); } }, TICK_MS);
 
-
-const SAVE_FILE = join(homedir(), '.ascii-save');
 const out = process.stdout;
 let screen = new Screen(out.columns, out.rows);
 let mode = 'menu';
@@ -109,3 +106,5 @@ process.stdin.on('data', (key) => {
 out.on('resize', () => { screen = new Screen(out.columns, out.rows); render(); });
 
 render();
+
+setInterval(() => { if (mode === 'single') { tickGame(); render(); } }, TICK_MS);
