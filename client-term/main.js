@@ -22,14 +22,25 @@ function render() {
   out.write(screen.diff());
 }
 
+const SAVE_FILE = join(homedir(), '.ascii-save');
+const SETTINGS_FILE = join(homedir(), '.ascii-settings');
+let cache = null;                                        // «кеш»: последнее сохранение в памяти программы
+try { menu.save = readFileSync(SETTINGS_FILE, 'utf8').trim() === 'save=1'; } catch {}
+
 function saveNow() {
   if (mode !== 'single') return;
-  try { writeFileSync(SAVE_FILE, encode(snapshot())); } catch {}
+  cache = encode(snapshot());                            // кеш: всегда
+  if (menu.save) { try { writeFileSync(SAVE_FILE, cache); } catch {} }   // файл: только если включено
+}
+
+function toggleSave() {
+  menu.save = !menu.save;
+  try { writeFileSync(SETTINGS_FILE, menu.save ? 'save=1' : 'save=0'); } catch {}
 }
 
 function startSingle() {
-  let s = null;
-  try { s = decode(readFileSync(SAVE_FILE, 'utf8').trim()); } catch {}
+  let s = decode(cache);
+  if (menu.save) { try { s = decode(readFileSync(SAVE_FILE, 'utf8').trim()) || s; } catch {} }
   resume(s);
   mode = 'single';
 }
@@ -79,6 +90,7 @@ process.stdin.on('data', (key) => {
     const m = menuKey(k);
     if (m === 'single') startSingle();
     else if (m === 'online') startOnline();
+    else if (m === 'save') toggleSave();
   } else if (k === 'escape') {
     backToMenu();
   } else {
