@@ -1,6 +1,7 @@
 import { CHUNK } from '../shared/chunk.js';
 import { MOB_KINDS } from '../shared/objects.js';
 import { drawIso } from './iso-view.js';
+import { ui, drawMobList } from './mob-list.js';
 
 export const player = { x: 0, y: 0 };
 const st = { id: -1, heights: null, objs: null, mobs: [], ready: false };
@@ -22,10 +23,11 @@ export function onMessage(msg) {
 
 export function renderOnline(screen) {
   screen.clear(0x000000);
-  if (!st.ready) { screen.text(1, 1, 'подключение...', 0x888888); return; }
+  if (!st.ready) { screen.text(1, 0 + 1, 'подключение...', 0x888888); return; }
+  if (ui.list) { drawMobList(screen, st.mobs); return; }
   drawIso(screen, st.heights, player, st.objs, st.mobs);
   const h = st.heights[player.y * CHUNK + player.x];
-  screen.text(1, 0, ` chunk:${st.id} x:${player.x} y:${player.y} h:${h} `, 0x888888);
-  const talker = st.mobs.find((m) => m.say);
+  screen.text(1, 0, ` chunk:${st.id} x:${player.x} y:${player.y} h:${h}  I — список `, 0x888888);
+  const talker = st.mobs.find((m) => m.say);             // сервер присылает say только адресату
   if (talker) screen.text(1, screen.h - 1, ` ${MOB_KINDS[talker.kind].name}: ${talker.say} `, 0x4de1ff);
 }
