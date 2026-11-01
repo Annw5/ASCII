@@ -6,6 +6,7 @@ import { menu, renderMenu, menuKey } from '../client-core/menu.js';
 import { encode, decode } from '../client-core/save.js';
 import { CanvasRenderer } from './canvas-renderer.js';
 import * as saveFile from './save-file.js';
+setInterval(() => { if (mode === 'single') { tickGame(); render(); } }, TICK_MS);
 
 const SAVE_KEY = 'ascii-save';
 const FLAG_KEY = 'ascii-save-file';                      // включено ли «сохранение в файл»
