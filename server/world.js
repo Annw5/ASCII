@@ -1,6 +1,6 @@
 import { CHUNK, makeChunk } from '../shared/chunk.js';
 import { SEA } from '../shared/terrain.js';
-import { makeObjects, } from '../shared/objects.js';
+import { makeObjects, makeMobs } from '../shared/objects.js';
 
 import { makeMob, occupied, canStep, newId, clock, mobAt, hit } from '../shared/mob.js';
 export { makeMob, occupied, canStep, newId, clock };     // остальные файлы импортируют их отсюда
