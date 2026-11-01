@@ -5,8 +5,10 @@ import { MOVES, ALIAS } from '../client-core/controls.js';
 import { menu, renderMenu, menuKey } from '../client-core/menu.js';
 import { encode, decode } from '../client-core/save.js';
 import { CanvasRenderer } from './canvas-renderer.js';
+import * as saveFile from './save-file.js';
 
 const SAVE_KEY = 'ascii-save';
+const FLAG_KEY = 'ascii-save-file';                      // включено ли «сохранение в файл»
 const canvas = document.getElementById('game');
 const stage = document.getElementById('stage');
 const menuBtn = document.getElementById('menuBtn');
@@ -14,6 +16,9 @@ const renderer = new CanvasRenderer(canvas, stage);
 let screen;
 let mode = 'menu';                                       // 'menu' | 'single' | 'online'
 let ws = null;
+let busy = false;                                        // идёт асинхронное действие (выбор файла и т.п.)
+
+try { menu.save = localStorage.getItem(FLAG_KEY) === '1'; } catch {}
 
 // сенсорный интерфейс: на телефонах/планшетах, либо вручную через ?touch
 if (matchMedia('(pointer: coarse)').matches || /[?&]touch\b/.test(location.search)) {
@@ -34,10 +39,39 @@ function render() {
   menuBtn.textContent = mode === 'menu' ? 'OK' : '☰';   // центральная кнопка: Enter в меню, Esc в игре
 }
 
+function run(fn) {                                       // запустить асинхронное действие из меню
+  busy = true;
+  fn().catch(() => {}).finally(() => { busy = false; render(); });
+}
+
 // ---------- сохранение ----------
 function saveNow() {
   if (mode !== 'single') return;
-  try { localStorage.setItem(SAVE_KEY, encode(snapshot())); } catch {}
+  const text = encode(snapshot());
+  try { localStorage.setItem(SAVE_KEY, text); } catch {}   // кеш: всегда
+  if (menu.save) saveFile.write(text);                   // файл: только если включено
+}
+
+async function toggleSave() {
+  if (menu.save) {                                       // выключаем
+    menu.save = false;
+    try { localStorage.removeItem(FLAG_KEY); } catch {}
+    return;
+  }
+  if (saveFile.canPick) {
+    let ok = await saveFile.open(true);
+    if (!ok) { await saveFile.choose(); }                // отмена выбора -> ошибка -> галочка не включится
+    const text = await saveFile.read();
+    if (text && decode(text)) {                          // в файле уже есть сохранение — берём его
+      try { localStorage.setItem(SAVE_KEY, text); } catch {}
+    } else {                                             // файл пустой — кладём в него текущий прогресс
+      let cached = null;
+      try { cached = localStorage.getItem(SAVE_KEY); } catch {}
+      if (cached) saveFile.write(cached);
+    }
+  }
+  menu.save = true;
+  try { localStorage.setItem(FLAG_KEY, '1'); } catch {}
 }
 
 // ---------- офлайн-кеш ----------
@@ -46,11 +80,22 @@ function prepareOffline() {
 }
 
 // ---------- режимы ----------
-function startSingle() {
+async function startSingle() {
   prepareOffline();
-  let s = null;
-  try { s = decode(localStorage.getItem(SAVE_KEY)); } catch {}
-  resume(s);
+  let text = null;
+  try { text = localStorage.getItem(SAVE_KEY); } catch {}
+  if (menu.save) {
+    if (saveFile.canPick) {
+      if (await saveFile.open(true)) {
+        const t = await saveFile.read();
+        if (t && decode(t)) text = t;                    // файл главнее кеша
+      }
+    } else if (!decode(text)) {                          // кеш пуст: просим указать скачанный файл
+      const t = await saveFile.pickText();
+      if (t && decode(t)) text = t;
+    }
+  }
+  resume(decode(text));
   mode = 'single';
 }
 
@@ -70,18 +115,22 @@ function startOnline() {
 }
 
 function backToMenu() {
+  const wasSingle = mode === 'single';
   saveNow();
+  if (wasSingle && menu.save && !saveFile.canPick) saveFile.download(encode(snapshot()));   // запасной вариант
   if (ws) { const s = ws; ws = null; s.close(); }
   mode = 'menu';
 }
 
 // ---------- единая обработка нажатий (клавиатура и экранные кнопки) ----------
-// k — нормализованная клавиша: 'w', 'enter', 'escape', ... Возвращает true, если нажатие обработано
 function handleKey(k) {
   if (mode === 'menu') {
     const m = menuKey(k);
-    if (m === 'single') startSingle();
-    else if (m === 'online') startOnline();
+    if (!busy) {
+      if (m === 'single') run(startSingle);
+      else if (m === 'online') startOnline();
+      else if (m === 'save') run(toggleSave);
+    }
     render();
     return true;
   }
@@ -102,6 +151,16 @@ window.addEventListener('keydown', (e) => {
   if (wasMenu || handled) e.preventDefault();
 });
 
+// ---------- нажатие по галочке «сохранение» (мышь и палец) ----------
+canvas.addEventListener('click', (e) => {
+  if (mode !== 'menu' || busy) return;
+  const r = canvas.getBoundingClientRect();
+  const col = Math.floor(((e.clientX - r.left) / r.width) * screen.w);
+  const row = Math.floor(((e.clientY - r.top) / r.height) * screen.h);
+  const hit = menu.saveHit;
+  if ((row === hit.y || row === hit.y + 1) && col >= hit.x0 && col < hit.x1) run(toggleSave);
+});
+
 // ---------- экранные кнопки ----------
 const REPEAT_MS = 160;                                   // как часто шагать, пока кнопку держат
 
@@ -116,12 +175,12 @@ for (const btn of document.querySelectorAll('.btn')) {
 
   btn.addEventListener('pointerdown', (e) => {
     e.preventDefault();
-    btn.setPointerCapture(e.pointerId);                  // pointerup придёт, даже если палец съехал с кнопки
+    btn.setPointerCapture(e.pointerId);
     btn.classList.add('on');
     handleKey(keyOf(btn));
     if (btn.dataset.key !== 'menu' && mode !== 'menu') {
       timer = setInterval(() => {
-        if (mode === 'menu') return stop();              // например, пропало соединение
+        if (mode === 'menu') return stop();
         handleKey(keyOf(btn));
       }, REPEAT_MS);
     }
@@ -133,7 +192,6 @@ for (const btn of document.querySelectorAll('.btn')) {
 window.addEventListener('pagehide', saveNow);
 document.addEventListener('visibilitychange', () => { if (document.hidden) saveNow(); });
 
-// следим за размером области игры: поворот телефона, адресная строка, смена окна
 new ResizeObserver(() => { setup(); render(); }).observe(stage);
 
 setup();
