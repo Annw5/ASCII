@@ -3,11 +3,14 @@ import { homedir, userInfo } from 'node:os';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Screen } from '../client-core/screen.js';
-import { resume, tryMove, renderGame, snapshot } from '../client-core/game.js';
+import { resume, tryMove, renderGame, snapshot, tickGame } from '../client-core/game.js';
 import { onMessage, renderOnline } from '../client-core/online.js';
 import { MOVES } from '../client-core/controls.js';
 import { menu, renderMenu, menuKey } from '../client-core/menu.js';
 import { encode, decode } from '../client-core/save.js';
+import { TICK_MS } from '../shared/constants.js';
+setInterval(() => { if (mode === 'single') { tickGame(); render(); } }, TICK_MS);
+
 
 const SAVE_FILE = join(homedir(), '.ascii-save');
 const out = process.stdout;
