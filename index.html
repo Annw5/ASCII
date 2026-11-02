@@ -105,6 +105,14 @@
     <button type="button" class="btn" data-key="s" style="grid-area:3/2">↓ S</button>
   </div>
 
-  <script type="module" src="client-web/main.js"></script>
+    <script>
+    // если игра упала, показываем причину под надписью «технические работы»
+    addEventListener('error', (e) => {
+      const m = document.getElementById('maint');
+      if (m) m.insertAdjacentHTML('beforeend', '<div style="font-size:12px;font-weight:400;margin-top:12px;max-width:90vw">' +
+        String(e.message || e.filename || 'ошибка загрузки').replace(/</g, '&lt;') + '</div>');
+    });
+  </script>
+  <script type="module" src="client-web/main.js?v=8"></script>
 </body>
 </html>
