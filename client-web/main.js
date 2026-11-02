@@ -18,17 +18,21 @@ let busy = false;
 
 try { menu.save = localStorage.getItem(FLAG_KEY) === '1'; } catch {}
 
-if (matchMedia('(pointer: coarse)').matches || /[?&]touch\b/.test(location.search)) {
-  document.body.classList.add('touch');
-}
+const touch = matchMedia('(pointer: coarse)').matches || /[?&]touch\b/.test(location.search);
+if (touch) document.body.classList.add('touch');
 
 function setup() {
   const { cols, rows } = viewSize();
-  renderer.fit(cols, rows);
-  screen = new Screen(cols, rows);
+  const d = renderer.fit(cols, rows, ui.corners);
+  screen = new Screen(d.cols, d.rows);
 }
 
-function setList(v) { ui.list = v; setup(); }    // панель меняет ширину экрана
+function setList(v) {                        // панель: на телефоне раскладка по углам
+  ui.list = v;
+  ui.corners = v && touch;
+  document.body.classList.toggle('panel', ui.corners);
+  setup();
+}
 
 function render() {
   if (mode === 'menu' && ui.list) setList(false);
