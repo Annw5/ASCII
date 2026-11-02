@@ -1,6 +1,6 @@
 import { Screen } from '../client-core/screen.js';
-import { ui, MOVES, ALIAS, menu, renderMenu, menuKey } from '../client-core/view.js';
-import { viewSize, resume, tryMove, renderGame, snapshot, tickGame, encode, decode, onMessage, renderOnline } from '../client-core/game.js';
+import { ui, MOVES, ALIAS, menu, renderMenu, menuKey, tradeKey } from '../client-core/view.js';
+import { viewSize, resume, tryMove, renderGame, snapshot, tickGame, tradeSingle, encode, decode, onMessage, renderOnline } from '../client-core/game.js';
 import { CanvasRenderer } from './canvas-renderer.js';
 import * as saveFile from './save-file.js';
 import { TICK_MS } from '../shared/world.js';
@@ -35,6 +35,7 @@ function setList(v) {                        // панель: на телефо�
 }
 
 function render() {
+  if (mode === 'menu') ui.trade = false;
   if (mode === 'menu' && ui.list) setList(false);
   if (mode === 'menu') renderMenu(screen);
   else if (mode === 'single') renderGame(screen);
@@ -132,6 +133,15 @@ function handleKey(k) {
     render();
     return true;
   }
+  if (ui.trade) {                            // окно торговли перехватывает все клавиши
+    const i = tradeKey(k);
+    if (i >= 0) {
+      if (mode === 'single') { tradeSingle(i); saveNow(); }
+      else if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: 'trade', i }));
+    }
+    render();
+    return true;
+  }
   if (k === 'escape') { if (ui.list) setList(false); else backToMenu(); render(); return true; }
   if (k === 'i') { setList(!ui.list); render(); return true; }
 
@@ -171,8 +181,8 @@ for (const btn of document.querySelectorAll('.btn')) {
     btn.classList.add('on');
     handleKey(keyOf(btn));
     const k = btn.dataset.key;
-    if (k !== 'menu' && k !== 'i' && mode !== 'menu') {
-      timer = setInterval(() => { if (mode === 'menu') return stop(); handleKey(keyOf(btn)); }, REPEAT_MS);
+    if (k !== 'menu' && k !== 'i' && mode !== 'menu' && !ui.trade) {   // в торговле автоповтора нет
+      timer = setInterval(() => { if (mode === 'menu' || ui.trade) return stop(); handleKey(keyOf(btn)); }, REPEAT_MS);
     }
   });
   for (const t of ['pointerup', 'pointercancel', 'lostpointercapture']) btn.addEventListener(t, stop);
