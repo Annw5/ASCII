@@ -104,23 +104,26 @@ export function tryMove(dx, dy) {
   const target = mobAt(world.cur, nx, ny);
   if (target) { interact(world.cur, target, player, clock.tick); return; }
   const next = at(nx, ny);
+  const o = world.cur.objs[ny * CHUNK + nx];
+  if (o) { inventory[o] = (inventory[o] || 0) + 1; return; }   // шаг в дерево/камень — добыча
   if (next > SEA && Math.abs(next - at(player.x, player.y)) <= 1 && !blocked(nx, ny)) {
     player.x = nx; player.y = ny;
   }
 }
 
-function scene(screen, chunk, p, objs, mobs) {   // игра слева, список справа
-  const w = ui.list ? screen.w - PANEL : screen.w;
-  drawIso(screen, chunk, p, objs, mobs, w >> 1);
-  if (ui.list) drawMobList(screen, mobs, w);
+function scene(screen, id, heights, objs, mobs, p, inv, meId) {
+  const w = ui.list && !ui.corners ? screen.w - PANEL : screen.w;
+  drawIso(screen, heights, p, objs, mobs, w >> 1);
+  const h = heights[p.y * CHUNK + p.x];
+  screen.text(1, 0, ` chunk:${id} h:${h} x:${p.x} y:${p.y}` + (ui.list ? ' ' : '  I — инвентарь '), 0x888888);
+  const t = mobs.find((m) => m.say && (m.sayTo ?? meId) === meId);   // реплика только для меня
+  if (t) screen.text(1, ui.corners && ui.list ? 1 : screen.h - 1, ` ${MOB_KINDS[t.kind].name}: ${t.say} `, 0x4de1ff);
+  if (ui.list) drawHud(screen, mobs, inv);
 }
 
 export function renderGame(screen) {
   screen.clear(0x000000);
-  scene(screen, world.cur.heights, player, world.cur.objs, world.cur.mobs);
-  screen.text(1, 0, ` chunk:${world.cur.id} x:${player.x} y:${player.y} h:${at(player.x, player.y)}  I — список `, 0x888888);
-  const talker = world.cur.mobs.find((m) => m.say && m.sayTo === player.id);
-  if (talker) screen.text(1, screen.h - 1, ` ${MOB_KINDS[talker.kind].name}: ${talker.say} `, 0x4de1ff);
+  scene(screen, world.cur.id, world.cur.heights, world.cur.objs, world.cur.mobs, player, inventory, player.id);
 }
 
 // ---------- сохранение ----------
@@ -146,7 +149,7 @@ export function decode(str) {
 
 // ---------- онлайн ----------
 const net = { x: 0, y: 0 };
-const st = { id: -1, heights: null, objs: null, mobs: [], ready: false };
+const st = { id: -1, heights: null, objs: null, mobs: [], inv: {}, ready: false };
 
 export function onMessage(msg) {
   if (msg.t === 'chunk') {
@@ -158,6 +161,7 @@ export function onMessage(msg) {
   } else if (msg.t === 'state') {
     net.x = msg.you.x; net.y = msg.you.y;
     st.mobs = msg.mobs;
+    st.inv = msg.inv || {};
     st.ready = !!st.heights;
   }
 }
@@ -165,8 +169,5 @@ export function onMessage(msg) {
 export function renderOnline(screen) {
   screen.clear(0x000000);
   if (!st.ready) { screen.text(1, 1, 'подключение...', 0x888888); return; }
-  scene(screen, st.heights, net, st.objs, st.mobs);
-  screen.text(1, 0, ` chunk:${st.id} x:${net.x} y:${net.y} h:${st.heights[net.y * CHUNK + net.x]}  I — список `, 0x888888);
-  const talker = st.mobs.find((m) => m.say);
-  if (talker) screen.text(1, screen.h - 1, ` ${MOB_KINDS[talker.kind].name}: ${talker.say} `, 0x4de1ff);
+  scene(screen, st.id, st.heights, st.objs, st.mobs, net, st.inv, -1);
 }
