@@ -150,7 +150,7 @@ export function drawHud(screen, mobs, inv) {
 }
 
 // ---------- меню ----------
-const ITEMS = ['online', 'single', 'save'];
+const MENU_ITEMS = ['online', 'single', 'save'];
 export const menu = { sel: 1, note: '', save: false, saveHit: { y: -1, x0: 0, x1: 0 } };
 
 function center(screen, y, str, fg) {
@@ -184,10 +184,10 @@ export function renderMenu(screen) {
 
 export function menuKey(k) {                 // 'online' | 'single' | 'save' | null
   menu.note = '';
-  const n = ITEMS.length;
+  const n = MENU_ITEMS.length;
   if (k === 'w') menu.sel = (menu.sel + n - 1) % n;
   else if (k === 's') menu.sel = (menu.sel + 1) % n;
-  else if (k === 'enter') return ITEMS[menu.sel];
-  else if (k === '1' || k === '2' || k === '3') { menu.sel = Number(k) - 1; return ITEMS[menu.sel]; }
+  else if (k === 'enter') return MENU_ITEMS[menu.sel];
+  else if (k === '1' || k === '2' || k === '3') { menu.sel = Number(k) - 1; return MENU_ITEMS[menu.sel]; }
   return null;
 }
