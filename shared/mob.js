@@ -33,13 +33,22 @@ export function canStep(c, x, y, nx, ny) {
 
 export const mobAt = (c, x, y) => c.mobs.find((m) => m.x === x && m.y === y) || null;
 
-function hit(c, m, tick) {                   // удар по зверю
+function drop(m) {                           // 40% ничего, 20% шкура, 30% мясо, 10% и то и другое
+  const r = Math.random();
+  if (r < 0.4) return [];
+  if (r < 0.6) return [100 + m.kind];
+  if (r < 0.9) return [3];
+  return [100 + m.kind, 3];
+}
+
+function hit(c, m, p, tick) {                // удар по зверю
   m.hurt = tick + 20;
   m.hp -= 1;
   if (m.hp <= 0) {
     m.dead = true;
     c.respawn.push({ at: tick + 80, kind: m.kind });
     c.mobs = c.mobs.filter((o) => !o.dead);
+    if (p.inv) for (const d of drop(m)) p.inv[d] = (p.inv[d] || 0) + 1;
   }
 }
 
@@ -50,12 +59,15 @@ function talk(m, p, tick) {                  // реплика только дл
   m.say = lines[n % lines.length];
   m.sayTo = p.id;
   m.sayUntil = tick + 10;
-  m.act = 'разговаривает';
+  m.act = 'торгует';
   m.mem.set(p.id, { n: n + 1, last: tick });
 }
 
-export function interact(c, m, p, tick) {    // шаг в существо: NPC — разговор, зверь — удар
-  if (m.kind === NPC) talk(m, p, tick); else hit(c, m, tick);
+// шаг в существо: NPC — торговля ('trade'), зверь — удар ('hit')
+export function interact(c, m, p, tick) {
+  if (m.kind === NPC) { talk(m, p, tick); return 'trade'; }
+  hit(c, m, p, tick);
+  return 'hit';
 }
 
 export const mobView = (m, forId) => ({      // что сервер шлёт игроку forId
@@ -76,8 +88,8 @@ const nameOf = (o) => (o.kind ? MOB_KINDS[o.kind].name : 'игрока');
 
 function period(m, tick) {
   if (isNpc(m)) return SLOW.npc;
-  if (isPred(m)) return SLOW.pred;
-  return m.hurt > tick ? SLOW.preyHurt : SLOW.prey;
+  if (m.hurt > tick) return SLOW.preyHurt;
+  return isPred(m) ? SLOW.pred : SLOW.prey;
 }
 
 function nearest(list, from, maxD) {
@@ -114,7 +126,11 @@ function wander(c, m) {
   m.act = 'стоит';
 }
 
-function hunter(c, m, tick) {
+function hunter(c, m, tick, players) {
+  if (m.hurt > tick) {                       // ударили — убегает от игрока, не охотится
+    const p = nearest(players, m, 8);
+    if (p) { m.act = 'убегает от: игрока (ранен)'; step(c, m, p.x, p.y, true); return; }
+  }
   if (m.fed > tick) { wander(c, m); m.act = `сыт, ${m.act}`; return; }
   const target = nearest(c.mobs.filter((o) => !o.dead && isPrey(o)), m, 7);
   if (!target) return wander(c, m);
@@ -142,7 +158,7 @@ function prey(c, m, tick, players, preds) {  // от хищников бежит
 }
 
 function npc(c, m, tick, players, preds) {   // реплики ставит только talk()
-  if (m.say) { m.act = 'разговаривает'; return; }
+  if (m.say) { m.act = 'торгует'; return; }
   const pr = nearest(preds, m, 4);
   if (pr) { m.act = `убегает от: ${nameOf(pr)}`; step(c, m, pr.x, pr.y, true); return; }
   const p = nearest(players, m, 8);
@@ -172,8 +188,8 @@ export function tickChunk(c, tick) {
     if (m.dead) continue;
     if ((tick + m.id) % period(m, tick) !== 0) continue;
     if (isNpc(m)) npc(c, m, tick, players, preds);
-    else if (isPred(m)) hunter(c, m, tick);
+    else if (isPred(m)) hunter(c, m, tick, players);
     else prey(c, m, tick, players, preds);
   }
   c.mobs = c.mobs.filter((m) => !m.dead);
-}
+                                                      }
