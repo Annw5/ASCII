@@ -15,6 +15,16 @@
     #stage { grid-area: stage; display: flex; align-items: center; justify-content: center; overflow: hidden; }
     canvas { display: block; flex: none; }
 
+    /* ---------- «технические работы»: видна, пока игра не запустилась ---------- */
+    #maint {
+      position: fixed; inset: 0; z-index: 100; background: #000;
+      display: flex; align-items: center; justify-content: center; text-align: center;
+      color: #ffe14d; font: 700 clamp(20px, 6vw, 40px) monospace;
+      opacity: 0; animation: maint .3s 1.5s forwards;
+    }
+    @keyframes maint { to { opacity: 1; } }
+    body.ok #maint { display: none; }
+
     /* ---------- сенсорное управление ---------- */
     .pad { display: none; }
     body.touch {
@@ -55,26 +65,29 @@
       body.touch #padl { padding-left: calc(8px + env(safe-area-inset-left)); }
       body.touch #padr { padding-right: calc(8px + env(safe-area-inset-right)); }
     }
+
     /* панель (I) на сенсорных: игра на весь экран, кнопки по нижним углам */
-body.touch.panel {
-  --b: min(14vw, 13dvh);
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr);
-  grid-template-areas: "all";
-}
-body.touch.panel #stage, body.touch.panel #padl, body.touch.panel #padr { grid-area: all; }
-body.touch.panel .pad {
-  position: relative; z-index: 1; align-self: end;
-  padding: 8px calc(8px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left));
-}
-body.touch.panel #padl { justify-self: start; }
-body.touch.panel #padr { justify-self: end; }
+    body.touch.panel {
+      --b: min(14vw, 13dvh);
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: minmax(0, 1fr);
+      grid-template-areas: "all";
+    }
+    body.touch.panel #stage, body.touch.panel #padl, body.touch.panel #padr { grid-area: all; }
+    body.touch.panel .pad {
+      position: relative; z-index: 1; align-self: end;
+      padding: 8px calc(8px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left));
+    }
+    body.touch.panel #padl { justify-self: start; }
+    body.touch.panel #padr { justify-self: end; }
   </style>
 </head>
 <body>
   <div id="stage"><canvas id="game"></canvas></div>
 
-  <!-- левый блок: диагональные шаги + кнопка меню в центре -->
+  <div id="maint">технические работы</div>
+
+  <!-- левый блок: диагональные шаги, кнопка меню и кнопка панели -->
   <div class="pad" id="padl">
     <button type="button" class="btn" data-key="q" style="grid-area:1/1">Q</button>
     <button type="button" class="btn" data-key="e" style="grid-area:1/3">E</button>
