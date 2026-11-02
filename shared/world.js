@@ -46,6 +46,8 @@ export const OBJ_KINDS = [
   { glyph: 'o', color: 0xb0b0b0 },
 ];
 
+export const ITEMS = [null, 'дерево', 'камень'];   // номер предмета = номер объекта (TREE, ROCK)
+
 const BEAST_LIST = [
   ['антилопа', 0xe8c87a], ['барсук', 0xd8d8a0], ['волк', 0x9aa5c0], ['глухарь', 0x7fd1a0],
   ['дикобраз', 0xc9a0ff], ['енот', 0xa8a8b8], ['ёж', 0xb08060], ['журавль', 0xf0f0ff],
