@@ -1,6 +1,6 @@
-import { CHUNK, SEA, MAXH, POOL, MOB_KINDS } from '../shared/world.js';
+import { CHUNK, SEA, POOL, MOB_KINDS } from '../shared/world.js';
 import { newChunk, tickChunk, clock, mobAt, interact } from '../shared/mob.js';
-import { drawIso, drawMobList, ui, PANEL } from './view.js';
+import { drawIso, drawHud, ui, PANEL, BASE_COLS, BASE_ROWS } from './view.js';
 
 // ---------- пул чанков (одиночная игра) ----------
 const N = 0, E = 1, S = 2, W = 3;
