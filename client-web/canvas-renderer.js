@@ -7,7 +7,7 @@ export class CanvasRenderer {
     this.ch = 20;
   }
 
-  fit(cols, rows) {
+    fit(cols, rows, full = false) {            // full — занять всю область, чанк вписан в меньшую сторону
     const availW = this.stage.clientWidth || window.innerWidth;
     const availH = this.stage.clientHeight || window.innerHeight;
     const byHeight = availH / rows;
@@ -16,6 +16,10 @@ export class CanvasRenderer {
     ch = Math.max(8, ch - (ch % 2));
     this.ch = ch;
     this.cw = ch / 2;
+    if (full) {
+      cols = Math.max(cols, Math.floor(availW / this.cw));
+      rows = Math.max(rows, Math.floor(availH / this.ch));
+    }
 
     const w = cols * this.cw;
     const h = rows * this.ch;
@@ -29,7 +33,8 @@ export class CanvasRenderer {
     this.ctx.font = `${Math.floor(this.ch * 0.8)}px monospace`;
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'middle';
-  }
+    return { cols, rows };
+    }
 
   draw(screen) {                                         // нарисовать экран-буфер на холсте
     const ctx = this.ctx;                                // короткое имя для кисти
