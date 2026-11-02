@@ -49,7 +49,7 @@ function blocked(x, y) {
 }
 
 export function viewSize() {
-  return { cols: CHUNK * 2 + 4 + (ui.list ? PANEL : 0), rows: ((MAXH + 1) >> 1) + CHUNK + 6 };
+  return { cols: BASE_COLS + (ui.list && !ui.corners ? PANEL : 0), rows: BASE_ROWS };
 }
 
 function placeNearCenter() {
