@@ -186,3 +186,5 @@ new ResizeObserver(() => { setup(); render(); }).observe(stage);
 setup();
 render();
 setInterval(() => { if (mode === 'single') { tickGame(); render(); } }, TICK_MS);
+
+document.body.classList.add('ok');           // дошли досюда — игра работает, «технические работы» скрываются
