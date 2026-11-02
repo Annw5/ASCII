@@ -1,4 +1,4 @@
-import { SEA, MAXH, CHUNK, hash, OBJ_KINDS, MOB_KINDS, NPC, ITEMS } from '../shared/world.js';
+import { SEA, MAXH, CHUNK, hash, OBJ_KINDS, MOB_KINDS, NPC, OFFERS, itemName, offerText, canTrade } from '../shared/world.js';
 
 // ---------- клавиши ----------
 export const MOVES = [
@@ -100,7 +100,7 @@ export function drawIso(screen, chunk, player, objs, mobs, cx = screen.w >> 1) {
 }
 
 // ---------- панели: инвентарь и список существ ----------
-export const ui = { list: false, corners: false };   // corners — сенсорная раскладка по углам
+export const ui = { list: false, corners: false, trade: false, sel: 0 };   // corners — сенсорная раскладка по углам
 export const PANEL = 40;                     // ширина боковой панели (компьютер, терминал)
 export const BASE_COLS = CHUNK * 2 + 4;      // размер чанка в клетках
 export const BASE_ROWS = ((MAXH + 1) >> 1) + CHUNK + 6;
@@ -110,7 +110,7 @@ function drawInv(screen, x, y, w, maxRows, inv) {
   screen.text(x, y, 'Инвентарь', 0x4de1ff);
   const items = Object.entries(inv).filter(([, n]) => n > 0).slice(0, maxRows - 1);
   if (!items.length) screen.text(x, y + 1, 'пусто', 0x777777);
-  items.forEach(([id, n], i) => screen.text(x, y + 1 + i, `${ITEMS[id] || '?'} x${n}`.slice(0, w), 0xffe14d));
+  items.forEach(([id, n], i) => screen.text(x, y + 1 + i, `${itemName(Number(id))} x${n}`.slice(0, w), 0xffe14d));
   return 1 + Math.max(1, items.length);
 }
 
@@ -147,6 +147,33 @@ export function drawHud(screen, mobs, inv) {
   const rows = wide ? ((screen.h * 2) / 5) | 0 : (screen.h - BASE_ROWS) >> 1;
   drawInv(screen, 1, 3, w, rows - 3, inv);   // строки 0-1: координаты и реплика
   drawMobList(screen, mobs, screen.w - w - 1, 0, w, rows, false);
+}
+
+// ---------- торговля ----------
+export function drawTrade(screen, inv) {     // окно поверх игры
+  const w = Math.min(screen.w - 2, 56), x = (screen.w - w) >> 1;
+  const h = OFFERS.length + 6, y = Math.max(0, (screen.h - h) >> 1);
+  const bg = 0x10141c;
+  for (let r = 0; r < h; r++) screen.text(x, y + r, ' '.repeat(w), 0xffffff, bg);
+  screen.text(x + 1, y, 'Торговля', 0x4de1ff, bg);
+  screen.text(x + 1, y + 1, 'Торговец: вот мои цены, меняю в обе стороны!'.slice(0, w - 2), 0xffe14d, bg);
+  OFFERS.forEach((o, i) => {
+    const on = i === ui.sel;
+    const col = on ? 0xffe14d : canTrade(inv, i) ? 0xcccccc : 0x666666;
+    screen.text(x + 1, y + 3 + i, `${on ? '>' : ' '}${i + 1}. ${offerText(o)}`.slice(0, w - 2), col, bg);
+  });
+  screen.text(x + 1, y + h - 1, 'W/S выбор, Enter/D обмен, Esc/A выход'.slice(0, w - 2), 0x888888, bg);
+}
+
+// k — нажатая клавиша. Двигает выбор или закрывает окно; возвращает номер обмена или -1
+export function tradeKey(k) {
+  const n = OFFERS.length;
+  if (k === 'w') ui.sel = (ui.sel + n - 1) % n;
+  else if (k === 's') ui.sel = (ui.sel + 1) % n;
+  else if (k === 'enter' || k === 'd') return ui.sel;
+  else if (k.length === 1 && k >= '1' && Number(k) <= n) return Number(k) - 1;
+  else if (k === 'escape' || k === 'a') ui.trade = false;
+  return -1;
 }
 
 // ---------- меню ----------
