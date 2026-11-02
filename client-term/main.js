@@ -3,8 +3,8 @@ import { homedir, userInfo } from 'node:os';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Screen } from '../client-core/screen.js';
-import { ui, MOVES, menu, renderMenu, menuKey } from '../client-core/view.js';
-import { resume, tryMove, renderGame, snapshot, tickGame, encode, decode, onMessage, renderOnline } from '../client-core/game.js';
+import { ui, MOVES, menu, renderMenu, menuKey, tradeKey } from '../client-core/view.js';
+import { resume, tryMove, renderGame, snapshot, tickGame, tradeSingle, encode, decode, onMessage, renderOnline } from '../client-core/game.js';
 import { TICK_MS } from '../shared/world.js';
 
 const out = process.stdout;
@@ -18,7 +18,7 @@ let cache = null;                            // «кеш»: последнее �
 try { menu.save = readFileSync(SETTINGS_FILE, 'utf8').trim() === 'save=1'; } catch {}
 
 function render() {
-  if (mode === 'menu') { ui.list = false; renderMenu(screen); }
+  if (mode === 'menu') { ui.list = false; ui.trade = false; renderMenu(screen); }
   else if (mode === 'single') renderGame(screen);
   else renderOnline(screen);
   out.write(screen.diff());
@@ -86,9 +86,15 @@ process.stdin.on('data', (buf) => {
     if (m === 'single') startSingle();
     else if (m === 'online') startOnline();
     else if (m === 'save') toggleSave();
+  } else if (ui.trade) {                     // окно торговли перехватывает клавиши
+    const i = tradeKey(k);
+    if (i >= 0) {
+      if (mode === 'single') { tradeSingle(i); saveNow(); }
+      else if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: 'trade', i }));
+    }
   } else if (k === 'escape') {
     if (ui.list) ui.list = false; else backToMenu();
-   } else if (k === 'i') {
+  } else if (k === 'i') {
     ui.list = !ui.list;
   } else {
     const m = MOVES.find((m) => m.key === k);
