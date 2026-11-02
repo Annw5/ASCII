@@ -55,6 +55,20 @@
       body.touch #padl { padding-left: calc(8px + env(safe-area-inset-left)); }
       body.touch #padr { padding-right: calc(8px + env(safe-area-inset-right)); }
     }
+    /* панель (I) на сенсорных: игра на весь экран, кнопки по нижним углам */
+body.touch.panel {
+  --b: min(14vw, 13dvh);
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-areas: "all";
+}
+body.touch.panel #stage, body.touch.panel #padl, body.touch.panel #padr { grid-area: all; }
+body.touch.panel .pad {
+  position: relative; z-index: 1; align-self: end;
+  padding: 8px calc(8px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left));
+}
+body.touch.panel #padl { justify-self: start; }
+body.touch.panel #padr { justify-self: end; }
   </style>
 </head>
 <body>
