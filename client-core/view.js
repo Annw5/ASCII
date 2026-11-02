@@ -1,4 +1,4 @@
-import { SEA, MAXH, CHUNK, hash, OBJ_KINDS, MOB_KINDS, NPC } from '../shared/world.js';
+import { SEA, MAXH, CHUNK, hash, OBJ_KINDS, MOB_KINDS, NPC, ITEMS } from '../shared/world.js';
 
 // ---------- клавиши ----------
 export const MOVES = [
@@ -99,26 +99,54 @@ export function drawIso(screen, chunk, player, objs, mobs, cx = screen.w >> 1) {
   if (pCol >= 0) screen.put(pCol, pRow, '@', 0xffe14d, 0);
 }
 
-// ---------- список существ (боковая панель) ----------
-export const ui = { list: false };
-export const PANEL = 40;                     // ширина панели в клетках
+// ---------- панели: инвентарь и список существ ----------
+export const ui = { list: false, corners: false };   // corners — сенсорная раскладка по углам
+export const PANEL = 40;                     // ширина боковой панели (компьютер, терминал)
+export const BASE_COLS = CHUNK * 2 + 4;      // размер чанка в клетках
+export const BASE_ROWS = ((MAXH + 1) >> 1) + CHUNK + 6;
 
-export function drawMobList(screen, mobs, x0) {
-  const x = x0 + 1, w = PANEL - 2;
-  screen.text(x, 0, `Существа: ${mobs.length} (I — закрыть)`, 0x4de1ff);
-  screen.text(x, 2, '  ' + 'Кто'.padEnd(10) + 'HP'.padEnd(5) + 'Клетка', 0x888888);
+function drawInv(screen, x, y, w, maxRows, inv) {
+  if (maxRows < 2) return 0;
+  screen.text(x, y, 'Инвентарь', 0x4de1ff);
+  const items = Object.entries(inv).filter(([, n]) => n > 0).slice(0, maxRows - 1);
+  if (!items.length) screen.text(x, y + 1, 'пусто', 0x777777);
+  items.forEach(([id, n], i) => screen.text(x, y + 1 + i, `${ITEMS[id] || '?'} x${n}`.slice(0, w), 0xffe14d));
+  return 1 + Math.max(1, items.length);
+}
+
+function drawMobList(screen, mobs, x, y, w, maxRows, two) {   // two — по две строки на существо
+  if (maxRows < 2) return;
+  screen.text(x, y, `Существа: ${mobs.length}`, 0x4de1ff);
+  const per = two ? 2 : 1;
   const list = [...mobs].sort((a, b) => (b.kind === NPC) - (a.kind === NPC) || a.kind - b.kind);
-  if (!list.length) screen.text(x, 4, 'Здесь никого нет', 0x777777);
   list.forEach((m, i) => {
-    const y = 3 + i * 2;
-    if (y >= screen.h - 1) return;
+    const r = y + 1 + i * per;
+    if (r + per > y + maxRows) return;
     const k = MOB_KINDS[m.kind];
-    screen.text(x, y, k.glyph, k.color);
-    screen.text(x + 2, y, k.name.padEnd(10), k.color);
-    screen.text(x + 12, y, (m.kind === NPC ? '∞' : `${m.hp}/${m.maxHp}`).padEnd(5), 0xff8080);
-    screen.text(x + 17, y, `${m.x},${m.y}`, 0x888888);
-    screen.text(x + 2, y + 1, (m.act || '').slice(0, w - 2), 0xaaaaaa);
+    screen.text(x, r, k.glyph, k.color);
+    screen.text(x + 2, r, k.name.padEnd(9), k.color);
+    screen.text(x + 11, r, (m.kind === NPC ? '∞' : `${m.hp}/${m.maxHp}`).padEnd(4), 0xff8080);
+    const act = m.act || '';
+    if (two) {
+      screen.text(x + 16, r, `${m.x},${m.y}`, 0x888888);
+      screen.text(x + 2, r + 1, act.slice(0, w - 2), 0xaaaaaa);
+    } else screen.text(x + 16, r, act.slice(0, w - 16), 0xaaaaaa);
   });
+}
+
+export function drawHud(screen, mobs, inv) {
+  if (!ui.corners) {                         // справа: инвентарь, под ним список
+    const x = screen.w - PANEL + 1, w = PANEL - 2;
+    const n = drawInv(screen, x, 0, w, 8, inv);
+    drawMobList(screen, mobs, x, n + 1, w, screen.h - n - 2, true);
+    return;
+  }
+  const cx = screen.w >> 1;
+  const wide = cx - 35 >= 20;                // альбомный: свободные полосы по бокам чанка
+  const w = wide ? cx - 35 : cx - 2;         // портретный: свободные полосы над чанком
+  const rows = wide ? ((screen.h * 2) / 5) | 0 : (screen.h - BASE_ROWS) >> 1;
+  drawInv(screen, 1, 3, w, rows - 3, inv);   // строки 0-1: координаты и реплика
+  drawMobList(screen, mobs, screen.w - w - 1, 0, w, rows, false);
 }
 
 // ---------- меню ----------
