@@ -1,12 +1,11 @@
-import { CHUNK, SEA, POOL, MOB_KINDS } from '../shared/world.js';
+import { CHUNK, SEA, POOL, MOB_KINDS, doTrade } from '../shared/world.js';
 import { newChunk, tickChunk, clock, mobAt, interact } from '../shared/mob.js';
-import { drawIso, drawHud, ui, PANEL, BASE_COLS, BASE_ROWS } from './view.js';
+import { drawIso, drawHud, drawTrade, ui, PANEL, BASE_COLS, BASE_ROWS } from './view.js';
 
 // ---------- пул чанков (одиночная игра) ----------
 const N = 0, E = 1, S = 2, W = 3;
 const loaded = new Map();
 export const world = { cur: null };
-
 
 function load(id) {
   if (!loaded.has(id)) loaded.set(id, newChunk(id));
@@ -38,8 +37,8 @@ function go(dir) {
 }
 
 // ---------- одиночная игра ----------
-export const player = { id: 0, name: 'Путник', x: 0, y: 0 };
 export const inventory = {};
+export const player = { id: 0, name: 'Путник', x: 0, y: 0, inv: inventory };   // inv нужен для добычи
 
 const at = (x, y) => world.cur.heights[y * CHUNK + x];
 
@@ -88,6 +87,8 @@ export function tickGame() {                 // один ход мира
   tickChunk(c, ++clock.tick);
 }
 
+export const tradeSingle = (i) => doTrade(inventory, i);
+
 export function tryMove(dx, dy) {
   let nx = player.x + dx, ny = player.y + dy, dirX = -1, dirY = -1;
   if (nx < 0)           { dirX = W; nx = CHUNK - 1; }
@@ -102,10 +103,13 @@ export function tryMove(dx, dy) {
     return;
   }
   const target = mobAt(world.cur, nx, ny);
-  if (target) { interact(world.cur, target, player, clock.tick); return; }
-  const next = at(nx, ny);
+  if (target) {
+    if (interact(world.cur, target, player, clock.tick) === 'trade') { ui.trade = true; ui.sel = 0; }
+    return;
+  }
   const o = world.cur.objs[ny * CHUNK + nx];
   if (o) { inventory[o] = (inventory[o] || 0) + 1; return; }   // шаг в дерево/камень — добыча
+  const next = at(nx, ny);
   if (next > SEA && Math.abs(next - at(player.x, player.y)) <= 1 && !blocked(nx, ny)) {
     player.x = nx; player.y = ny;
   }
@@ -119,6 +123,7 @@ function scene(screen, id, heights, objs, mobs, p, inv, meId) {
   const t = mobs.find((m) => m.say && (m.sayTo ?? meId) === meId);   // реплика только для меня
   if (t) screen.text(1, ui.corners && ui.list ? 1 : screen.h - 1, ` ${MOB_KINDS[t.kind].name}: ${t.say} `, 0x4de1ff);
   if (ui.list) drawHud(screen, mobs, inv);
+  if (ui.trade) drawTrade(screen, inv);
 }
 
 export function renderGame(screen) {
@@ -162,6 +167,7 @@ export function onMessage(msg) {
     net.x = msg.you.x; net.y = msg.you.y;
     st.mobs = msg.mobs;
     st.inv = msg.inv || {};
+    if (msg.trade) { ui.trade = true; ui.sel = 0; }
     st.ready = !!st.heights;
   }
 }
@@ -170,4 +176,4 @@ export function renderOnline(screen) {
   screen.clear(0x000000);
   if (!st.ready) { screen.text(1, 1, 'подключение...', 0x888888); return; }
   scene(screen, st.id, st.heights, st.objs, st.mobs, net, st.inv, -1);
-}
+    }
