@@ -46,7 +46,8 @@ export const OBJ_KINDS = [
   { glyph: 'o', color: 0xb0b0b0 },
 ];
 
-export const ITEMS = [null, 'дерево', 'камень'];   // номер предмета = номер объекта (TREE, ROCK)
+// предметы: 1 дерево, 2 камень, 3 мясо, 100+вид зверя — шкура этого зверя
+export const ITEMS = [null, 'дерево', 'камень', 'мясо'];
 
 const BEAST_LIST = [
   ['антилопа', 0xe8c87a], ['барсук', 0xd8d8a0], ['волк', 0x9aa5c0], ['глухарь', 0x7fd1a0],
@@ -92,4 +93,42 @@ export function makeMobs(id, heights, objs) {   // 9 зверей + 3 NPC
     mobs.push({ x, y, kind: mobs.length < 9 ? 1 + hash(id, k, 13) % BEASTS : NPC });
   }
   return mobs;
+}
+
+// ---------- предметы и торговля ----------
+export const itemName = (id) => id >= 100 ? `шкура: ${MOB_KINDS[id - 100].name}` : ITEMS[id] || '?';
+
+// give/get: [предмет, количество]; 'skin' — шкура: при отдаче любая, при получении случайная
+export const OFFERS = [
+  { give: [2, 1], get: [1, 1] },             // камень -> дерево
+  { give: [1, 1], get: [2, 1] },             // дерево -> камень
+  { give: [1, 3], get: [3, 1] },             // 3 дерева -> мясо
+  { give: [2, 3], get: [3, 1] },             // 3 камня -> мясо
+  { give: [3, 1], get: [1, 3] },             // мясо -> 3 дерева
+  { give: [3, 1], get: [2, 3] },             // мясо -> 3 камня
+  { give: [3, 3], get: ['skin', 1] },        // 3 мяса -> шкура случайного зверя
+  { give: ['skin', 1], get: [3, 3] },        // шкура -> 3 мяса
+];
+
+const side = (id, n, get) => `${id === 'skin' ? (get ? 'шкура случайного' : 'шкура любого') : itemName(id)} x${n}`;
+export const offerText = (o) => `${side(...o.give, false)} → ${side(...o.get, true)}`;
+
+function giveId(inv, o) {                    // какой предмет реально отдаём (или null)
+  const [g, n] = o.give;
+  const id = g === 'skin' ? Object.keys(inv).find((k) => k >= 100 && inv[k] >= 1) : g;
+  return id !== undefined && (inv[id] || 0) >= n ? id : null;
+}
+
+export const canTrade = (inv, i) => giveId(inv, OFFERS[i]) !== null;
+
+export function doTrade(inv, i) {            // true — обмен выполнен
+  const o = OFFERS[i];
+  if (!o) return false;
+  const gid = giveId(inv, o);
+  if (gid === null) return false;
+  inv[gid] -= o.give[1];
+  if (inv[gid] <= 0) delete inv[gid];
+  const rid = o.get[0] === 'skin' ? 100 + 1 + Math.floor(Math.random() * BEASTS) : o.get[0];
+  inv[rid] = (inv[rid] || 0) + o.get[1];
+  return true;
 }
