@@ -31,6 +31,23 @@ function setList(v) {                        // панель: на телефо�
   ui.list = v;
   ui.corners = v && touch;
   document.body.classList.toggle('panel', ui.corners);
+  
+  // ---------- счётчик посещений за месяц ----------
+const VISIT_KEY = 'ascii-visit-month';
+const COUNTER = 'https://api.counterapi.dev/v1/ascii-game-ru';   // пространство имён: поменяй на своё уникальное
+
+async function loadVisits() {
+  try {
+    const month = new Date().toISOString().slice(0, 7);          // "2026-11"
+    let first = false;
+    try { first = localStorage.getItem(VISIT_KEY) !== month; } catch {}
+    const r = await fetch(`${COUNTER}/${month}${first ? '/up' : ''}`);
+    const n = (await r.json()).count;
+    if (Number.isInteger(n)) menu.visits = n;
+    if (first) { try { localStorage.setItem(VISIT_KEY, month); } catch {} }
+    if (mode === 'menu') render();
+  } catch {}                                                     // нет сети — просто не показываем
+}
   setup();
 }
 
@@ -131,6 +148,7 @@ function handleKey(k) {
       else if (m === 'save') run(toggleSave);
     }
     render();
+    loadVisits();
     return true;
   }
   if (ui.trade) {                            // окно торговли перехватывает все клавиши
