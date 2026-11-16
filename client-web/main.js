@@ -34,7 +34,7 @@ function setList(v) {                        // панель: на телефо�
   
   // ---------- счётчик посещений за месяц ----------
 const VISIT_KEY = 'ascii-visit-month';
-const COUNTER = 'https://api.counterapi.dev/v1/ascii-game-ru';   // пространство имён: поменяй на своё уникальное
+const COUNTER = 'https://api.counterapi.dev/v1/namespace';   // пространство имён: поменяй на своё уникальное
 
 async function loadVisits() {
   try {
