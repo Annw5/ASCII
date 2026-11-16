@@ -178,7 +178,7 @@ export function tradeKey(k) {
 
 // ---------- меню ----------
 const MENU_ITEMS = ['online', 'single', 'save'];
-export const menu = { sel: 1, note: '', save: false, saveHit: { y: -1, x0: 0, x1: 0 } };
+export const menu = { sel: 1, note: '', save: false, visits: null, saveHit: { y: -1, x0: 0, x1: 0 } };
 
 function center(screen, y, str, fg) {
   screen.text(Math.max(0, (screen.w - [...str].length) >> 1), y, str, fg);
@@ -188,6 +188,7 @@ export function renderMenu(screen) {
   screen.clear(0x000000);
   const y0 = Math.max(1, (screen.h >> 1) - 6);
   center(screen, y0, 'A S C I I', 0x4de1ff);
+  if (menu.visits !== null) center(screen, y0 + 1, `Посещений за месяц: ${menu.visits}`, 0x777777);
   const rows = [
     { text: 'Онлайн', off: 0x888888 },
     { text: 'Одиночная игра', off: 0x888888 },
